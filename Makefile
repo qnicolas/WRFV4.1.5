@@ -356,6 +356,39 @@ em_b_wave : wrf
 		echo " " ; \
 	fi
 
+em_beta_plane : wrf
+	@/bin/rm -f ideal.exe > /dev/null 2>&1
+	@/bin/rm -f wrf.exe   > /dev/null 2>&1
+	@ echo '--------------------------------------'
+	( cd main ; $(MAKE) RLFLAGS="$(RLFLAGS)" MODULE_DIRS="$(ALL_MODULES)" SOLVER=em IDEAL_CASE=beta_plane em_ideal )
+	( cd test/em_beta_plane; /bin/rm -f wrf.exe ; ln -s ../../main/wrf.exe . )
+	( cd test/em_beta_plane; /bin/rm -f ideal.exe ; ln -s ../../main/ideal.exe . )
+	( cd test/em_beta_plane; /bin/rm -f README.namelist ; ln -s ../../run/README.namelist . )
+	( cd run ; /bin/rm -f ideal.exe ; ln -s ../main/ideal.exe . )
+	( cd run ; if test -f namelist.input ; then \
+        /bin/cp -f namelist.input namelist.input.backup.`date +%Y-%m-%d_%H_%M_%S` ; fi ; \
+        /bin/rm -f namelist.input ; cp ../test/em_beta_plane/namelist.input . )
+	( cd run ; /bin/rm -f input_jet ; ln -s ../test/em_beta_plane/input_jet . )
+	@echo " "
+	@echo "=========================================================================="
+	@echo "build started:   $(START_OF_COMPILE)"
+	@echo "build completed:" `date`
+	@if test -e main/wrf.exe -a -e main/ideal.exe ; then \
+		echo " " ; \
+		echo "--->                  Executables successfully built                  <---" ; \
+		echo " " ; \
+		ls -l main/*.exe ; \
+		echo " " ; \
+		echo "==========================================================================" ; \
+		echo " " ; \
+	else \
+		echo " " ; \
+		echo "---> Problems building executables, look for errors in the build log  <---" ; \
+		echo " " ; \
+		echo "==========================================================================" ; \
+		echo " " ; \
+	fi
+
 em_les : wrf
 	@/bin/rm -f ideal.exe > /dev/null 2>&1
 	@/bin/rm -f wrf.exe   > /dev/null 2>&1
