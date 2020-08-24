@@ -138,7 +138,7 @@ CONTAINS
 
    ! wrb:
    INTEGER :: nyy, jg, jcent
-   REAL    :: dphi, ns_extent, tmp
+   REAL    :: dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
    
 
    SELECT CASE ( model_data_order )
@@ -247,9 +247,12 @@ CONTAINS
 ! wrb:  add small narrow mountain:
    hm = 1000.
    !hm = 0.
-   xa = 0.5
+   xa = 130./100. !qn: for Shi&Durran type mountain
+   ya = 130./100. !qn: for Shi&Durran type mountain
+   yb = 500./100.  !qn: for Shi&Durran type mountain
+   rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
    icm = ide/2
-   jcm = jde/2
+   jcm = 0
    !z_scale = 8000./config_flags%ztop
 
 ! Note: htbub, radbub, radz, tpbub set above as parameters
@@ -409,7 +412,7 @@ CONTAINS
       !grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
       !grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
       ! beta plane:
-      grid%e(i,j)     = 2*EOMEG*(1.-grid%xlat(i,j)*degrad)
+      grid%e(i,j)     = 2*EOMEG !QN: Has to be set constant to conserve vorticity (cf Grimshaw 1975)
       grid%f(i,j)     = 2*EOMEG*grid%xlat(i,j)*degrad
 
       !grid%sst(i,j)=300.
@@ -421,6 +424,8 @@ CONTAINS
         tmp = (2. - tmp*tmp*tmp*tmp - tmp*tmp)*0.5
         grid%sst(i,j) = 273.15 + tmp*(27. - 0.) + 0. 
       end if
+      !QN: increase SSTs by 2K uniformly to simulate 2*CO2
+      !grid%sst(i,j) = grid%sst(i,j) +2.
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       grid%xland(i,j)     = 2.
@@ -967,12 +972,24 @@ CONTAINS
   CASE (quarter_ss, convrad, squall2d_x, squall2d_y, grav2d_x, beta_plane, seabreeze2d_x)
   DO j=jts,jte
   DO i=its,ite 
-    !if (abs(float(j - jcm)) < 20.) then
-    if (abs(grid%xlat(i,j)) < 5.) then   ! wrb: do half an eq beta plane
-      grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
+    !!if (abs(float(j - jcm)) < 20.) then
+    !if (abs(grid%xlat(i,j)) < 5.) then   ! wrb: do half an eq beta plane
+    !  grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
+    !else
+    !  grid%ht(i,j) = 0.
+    !end if 
+! QN : add a Shi&Durran 2013 type mountain
+    if (abs(float(j-jcm))<yb) then
+      rmountain = sqrt((float(i-icm)/xa)**2)
+    else
+      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 )
+    end if
+    if (rmountain<1.) then
+      grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))
     else
       grid%ht(i,j) = 0.
-    end if 
+    end if
+! QN : END Shi&Durran 2013 type mountain
     !grid%ht(i,j) = 0.
     grid%phb(i,1,j) = g*grid%ht(i,j)
     grid%php(i,1,j) = 0.
