@@ -1855,7 +1855,7 @@ CONTAINS
 !  n2ovmr = 0.
 !  ch4vmr = 0.
 ! values updated to RRTMG in V3.5
-   co2vmr = 379.e-6
+   co2vmr = 350.e-6
    n2ovmr = 319.e-9
    ch4vmr = 1774.e-9
 #endif

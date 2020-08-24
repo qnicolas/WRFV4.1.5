@@ -15498,7 +15498,7 @@ integer,external :: omp_get_thread_num
 ! Set trace gas volume mixing ratios, 2005 values, IPCC (2007)
 ! carbon dioxide (379 ppmv)
     real :: co2
-    data co2 / 379.e-6 / 
+    data co2 / 350.e-6 / 
 ! methane (1774 ppbv)
     real :: ch4
     data ch4 / 1774.e-9 / 

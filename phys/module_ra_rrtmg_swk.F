@@ -10329,7 +10329,7 @@ contains
 ! carbon dioxide (379 ppmv)
 !
    real :: co2
-   data co2 / 379.e-6 /
+   data co2 / 350.e-6 /
 !
 ! methane (1774 ppbv)
 !
