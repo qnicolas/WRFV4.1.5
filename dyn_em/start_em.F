@@ -1947,7 +1947,9 @@ DEALLOCATE(z_at_q)
                  ,p_pl  = grid%p_pl             &  
                  ,u_pl  = grid%u_pl             &  
                  ,v_pl  = grid%v_pl             &  
+                 ,w_pl  = grid%w_pl             &  
                  ,t_pl  = grid%t_pl             &  
+                 ,rho_pl= grid%rho_pl           &
                  ,rh_pl = grid%rh_pl            &
                  ,ght_pl= grid%ght_pl           &
                  ,s_pl  = grid%s_pl             &  

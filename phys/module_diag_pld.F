@@ -16,7 +16,7 @@ CONTAINS
                     f,e,                                            &
                     use_tot_or_hyd_p,extrap_below_grnd,missing,     &  
                     num_press_levels,max_press_levels,press_levels, &
-                    p_pl,u_pl,v_pl,t_pl,rh_pl,ght_pl,s_pl,td_pl,    &
+                    p_pl,u_pl,v_pl,w_pl,t_pl,rho_pl,rh_pl,ght_pl,s_pl,td_pl,    &
                     q_pl,                                           &
                     ids,ide, jds,jde, kds,kde,                      &
                     ims,ime, jms,jme, kms,kme,                      &
@@ -44,7 +44,7 @@ CONTAINS
       !  Output variables
    
       REAL   , INTENT(  OUT) ,  DIMENSION(num_press_levels)                     :: p_pl
-      REAL   , INTENT(  OUT) ,  DIMENSION(ims:ime , num_press_levels , jms:jme) :: u_pl,v_pl,t_pl,rh_pl,ght_pl,s_pl,td_pl,q_pl
+      REAL   , INTENT(  OUT) ,  DIMENSION(ims:ime , num_press_levels , jms:jme) :: u_pl,v_pl,w_pl,t_pl,rho_pl,rh_pl,ght_pl,s_pl,td_pl,q_pl
    
       !  Local variables
    
@@ -77,7 +77,9 @@ CONTAINS
             DO i = its , ite
                u_pl  (i,kp,j) = missing
                v_pl  (i,kp,j) = missing
+               w_pl  (i,kp,j) = missing
                t_pl  (i,kp,j) = missing
+               rho_pl(i,kp,j) = missing
                rh_pl (i,kp,j) = missing
                ght_pl(i,kp,j) = missing
                s_pl  (i,kp,j) = missing
@@ -176,6 +178,11 @@ CONTAINS
                      u_pl(i,kp,j) = 0.5 * ( u(i,ke  ,j) + u(i+1,ke  ,j) )
                      v_pl(i,kp,j) = 0.5 * ( v(i,ke  ,j) + v(i,ke  ,j+1) )
                      
+                     !  4.5 W (m s-1) and rho (kg/m3)
+
+                     w_pl(i,kp,j) = 0.5 * ( w(i,ke  ,j) + w(i,ke+1,j) )
+                     rho_pl(i,kp,j) = pd / ( r_d * t_pl(i,kp,j) * (1+0.61*MAX(qv(i,ke,j),0.)))
+
                      !  5. Relative humidity (%)
 
                      es = s4 * exp(s5 * (1.0 / 273.0 - 1.0 / tu) )
@@ -232,6 +239,10 @@ CONTAINS
                      qd = MAX(qv(i,ke  ,j),0.)
                      q_pl(i,kp,j) = ( qu * (pm-pd) + qd * (pu-pm) ) / (pu-pd)
 
+                     !  4.5 Density (kg/m3)
+
+                     rho_pl(i,kp,j) = pm / ( r_d * t_pl(i,kp,j) * (1+0.61*q_pl(i,kp,j)))
+
                      !  5. Dewpoint (K) - Use Bolton's approximation
    
                      eu = qu * pu * 0.01 / ( eps + qu ) ! water vapor press (mb)
@@ -279,6 +290,10 @@ CONTAINS
                      zd = ( zp(i,ke  ,j)+zb(i,ke  ,j) ) / g
                      ght_pl(i,kp,j) = ( zu * (pm-pd) + zd * (pu-pm) ) / (pu-pd)
    
+                     !  2. W (m s-1)
+   
+                     w_pl(i,kp,j) = ( w(i,ke+1,j) * (pm-pd) + w(i,ke  ,j) * (pu-pm) ) / (pu-pd)
+
                      ke_f = ke
                      EXIT ke_loop_full
                   END IF
