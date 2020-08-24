@@ -364,8 +364,10 @@ CONTAINS
    END DO
 
    CASE(beta_plane)
-
-    CALL nl_set_mminlu(1,'    ')
+    mminlu2 = ' '
+    mminlu2(1:4) = 'USGS'
+    CALL nl_set_mminlu(1, mminlu2)
+!    CALL nl_set_mminlu(1,'    ')
     !CALL nl_set_iswater(1,0)
     CALL nl_set_iswater(1,16)  ! wrb: need to change
     CALL nl_set_cen_lat(1,0.)
@@ -428,21 +430,27 @@ CONTAINS
       !grid%sst(i,j) = grid%sst(i,j) +2.
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
-      grid%xland(i,j)     = 2.
-      grid%lu_index(i,j)  = 16
+      
+      !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
+      !height is re-computed later when we set the grid%ht variable
+      if (abs(float(j-jcm))<yb) then                                              ! qn : Shi&Durran 2013 type mountain
+        rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
+      else
+        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
+      end if
+      if (rmountain<1.) then
+        grid%landmask(i,j)  = 1
+        grid%xland(i,j)     = 1.
+        grid%lu_index(i,j)  = 7
+      else
+        grid%landmask(i,j)  = 0
+        grid%xland(i,j)     = 2.
+        grid%lu_index(i,j)  = 16
+      endif
+
      END DO
    END DO
 
-   DO j = jts , MIN(jde-1,jte)
-     DO i = its , MIN(ide-1,ite)
-       grid%vegfra(i,j) = 0.
-       grid%canwat(i,j) = 0.
-       grid%ivgtyp(i,j) = 16
-       grid%isltyp(i,j) = 14
-       grid%xice(i,j) = 0.
-       grid%snow(i,j) = 0.
-     END DO
-   END DO
    DO j = jts, jte
      DO k = kts, kte
        DO i = its, ite
@@ -450,8 +458,65 @@ CONTAINS
        END DO
      END DO
    END DO
-!  wrb: end beta plane CASE 
- 
+!  wrb: end beta plane CASE !QN : just need to add a bit of land processing
+   DO j = jts , MIN(jde-1,jte)
+      DO i = its , MIN(ide-1,ite)
+         IF (grid%xland(i,j) .lt. 1.5) THEN
+            grid%vegfra(i,j) = 50.
+            grid%canwat(i,j) = 0.
+            grid%ivgtyp(i,j) = 18
+            grid%isltyp(i,j) = 7
+            grid%xice(i,j) = 0.
+            grid%snow(i,j) = 0.
+         ELSE
+            grid%vegfra(i,j) = 0.
+            grid%canwat(i,j) = 0.
+            grid%ivgtyp(i,j) = 16
+            grid%isltyp(i,j) = 14
+            grid%xice(i,j) = 0.
+            grid%snow(i,j) = 0.
+         ENDIF
+      END DO
+   END DO
+ ! for Noah LSM, additional variables need to be initialized
+
+   beta_plane_masked_fields : SELECT CASE ( model_config_rec%sf_surface_physics(grid%id) )
+
+      CASE (SLABSCHEME)
+
+      CASE (LSMSCHEME)
+
+        DO j = jts , MIN(jde-1,jte)
+           DO i = its , MIN(ide-1,ite)
+              IF (grid%xland(i,j) .lt. 1.5) THEN
+                 grid%vegfra(i,j) = 50.
+                 grid%canwat(i,j) = 0.
+                 grid%ivgtyp(i,j) = 18
+                 grid%isltyp(i,j) = 7
+                 grid%xice(i,j) = 0.
+                 grid%snow(i,j) = 0.
+              ELSE
+                 grid%vegfra(i,j) = 0.
+                 grid%canwat(i,j) = 0.
+                 grid%ivgtyp(i,j) = 16
+                 grid%isltyp(i,j) = 14
+                 grid%xice(i,j) = 0.
+                 grid%snow(i,j) = 0.
+              ENDIF
+           END DO
+        END DO
+
+      CASE (RUCLSMSCHEME)
+
+   END SELECT beta_plane_masked_fields
+      CALL process_soil_ideal(grid%xland,grid%xice,grid%vegfra,grid%snow,grid%canwat, &
+                     grid%ivgtyp,grid%isltyp,grid%tslb,grid%smois, &
+                     grid%tsk,grid%tmn,grid%zs,grid%dzs,model_config_rec%num_soil_layers, &
+                     model_config_rec%sf_surface_physics(grid%id), &
+                                   ids,ide, jds,jde, kds,kde,&
+                                   ims,ime, jms,jme, kms,kme,&
+                                   its,ite, jts,jte, kts,kte )
+   !QN : end beta_plane case now
 
    CASE(convrad)
     mminlu2 = ' '
