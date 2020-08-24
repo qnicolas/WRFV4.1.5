@@ -3069,8 +3069,9 @@ CONTAINS
              tloctm=gmt+xt24/60.+xlon(i,j)/15.
              hrang(i,j)=15.*(tloctm-12.)*degrad
              xxlat=xlat(i,j)*degrad
-             coszen(i,j)=sin(xxlat)*sin(declin) &
-                        +cos(xxlat)*cos(declin) *cos(hrang(i,j))
+             !coszen(i,j)=sin(xxlat)*sin(declin) &
+             !           +cos(xxlat)*cos(declin) *cos(hrang(i,j))
+             coszen(i,j)=cos(xxlat)*cos(hrang(i,j)) !QN : turn off seasonal cycle, constant equinox
           enddo
        enddo
    END SUBROUTINE calc_coszen
