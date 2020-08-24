@@ -3,30 +3,28 @@
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
- start_year                          = 0001,
+ start_year                          = 1970,
  start_month                         = 01,
  start_day                           = 01,
  start_hour                          = 00,
  start_minute                        = 00,
  start_second                        = 00,
  history_interval                    = 360,
- frames_per_outfile                  = 1460,
+ frames_per_outfile                  = 40,
  restart                             = .false.,
  restart_interval                    = 43200,
  io_form_history                     = 2
  io_form_restart                     = 2
  io_form_input                       = 2
  io_form_boundary                    = 2
+! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp/test/em_beta_plane/wrfpout_d<domain>_<date>"
+! auxhist23_interval                  = 60,
+! frames_per_auxhist23                = 240,
+! io_form_auxhist23                   = 2,
  /
 
  &domains
  use_adaptive_time_step              = .false.,
- step_to_output_time                 = .true.,
- target_cfl                          = 1.2,
- max_step_increase_pct               = 5,
- starting_time_step                  = -1,
- max_time_step                       = 800,
- min_time_step                       = 300,
  time_step                           = 200,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
@@ -36,7 +34,7 @@
  s_sn                                = 1,
  e_sn                                = 71,
  s_vert                              = 1,
- e_vert                              = 65,
+ e_vert                              = 39,
  dx                                  = 100000,
  dy                                  = 100000,
  ztop                                = 16000,
@@ -53,22 +51,30 @@
  &physics
  mp_physics                          = 6,
  cu_physics                          = 16,
- ra_lw_physics                       = 4,
- ra_sw_physics                       = 4,
+ ra_lw_physics                       = 24,
+ ra_sw_physics                       = 24,
  bl_pbl_physics                      = 1,
  sf_sfclay_physics                   = 91,
- sf_surface_physics                  = 0,
- radt                                = 100,
+ sf_surface_physics                  = 4,
+ radt                                = 180,
  bldt                                = 0,
  cudt                                = 5,
  isfflx                              = 1
+ /
+
+ &noah_mp
+ dveg				     = 4,
+ opt_tbot			     = 1, !used to enforce zero flux at the bottom of the soil layer 
+ opt_crs=1
+ opt_sfc=1
+ opt_btr=1
  /
 
  &fdda
  /
 
  &dynamics
- hybrid_opt                          = 0, 
+ hybrid_opt                          = 2, 
  rk_ord                              = 3,
  diff_opt                            = 1,
  km_opt                              = 1,
@@ -112,3 +118,9 @@
  &ideal
  ideal_case = 7
  /
+
+! &diags
+! p_lev_diags = 1,
+! num_press_levels = 30,
+! press_levels = 100000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7000,5000,1000
+! /
