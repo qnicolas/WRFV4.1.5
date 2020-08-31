@@ -1,23 +1,23 @@
  &time_control
- run_days                            = 420,
+ run_days                            = 210,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
  start_year                          = 1970,
- start_month                         = 01,
+ start_month                         = 04,
  start_day                           = 01,
  start_hour                          = 00,
  start_minute                        = 00,
  start_second                        = 00,
  history_interval                    = 360,
  frames_per_outfile                  = 40,
- restart                             = .false.,
+ restart                             = .true.,
  restart_interval                    = 43200,
- io_form_history                     = 2
+ io_form_history                     = 11
  io_form_restart                     = 2
  io_form_input                       = 2
  io_form_boundary                    = 2
-! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp/test/em_beta_plane/wrfpout_d<domain>_<date>"
+! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp_crosseq/test/em_beta_plane/wrfpout_d<domain>_<date>"
 ! auxhist23_interval                  = 60,
 ! frames_per_auxhist23                = 240,
 ! io_form_auxhist23                   = 2,
@@ -119,8 +119,8 @@
  ideal_case = 7
  /
 
-! &diags
-! p_lev_diags = 1,
-! num_press_levels = 30,
-! press_levels = 100000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7000,5000,1000
-! /
+ &diags
+ p_lev_diags = 0,
+ num_press_levels = 30,
+ press_levels = 100000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7000,5000,1000
+ /
