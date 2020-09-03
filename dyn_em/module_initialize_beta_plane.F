@@ -432,22 +432,10 @@ CONTAINS
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       
-      !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
-      !height is re-computed later when we set the grid%ht variable
-      if (abs(float(j-jcm))<yb) then                                              ! qn : Shi&Durran 2013 type mountain
-        rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
-      else
-        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
-      end if
-      if (rmountain<1.) then
-        grid%landmask(i,j)  = 1
-        grid%xland(i,j)     = 1.
-        grid%lu_index(i,j)  = 7
-      else
-        grid%landmask(i,j)  = 0
-        grid%xland(i,j)     = 2.
-        grid%lu_index(i,j)  = 16
-      endif
+      !QN : aquaplanet run here, no mountain
+      grid%landmask(i,j)  = 0
+      grid%xland(i,j)     = 2.
+      grid%lu_index(i,j)  = 16
 
      END DO
    END DO
@@ -1038,25 +1026,8 @@ CONTAINS
   CASE (quarter_ss, convrad, squall2d_x, squall2d_y, grav2d_x, beta_plane, seabreeze2d_x)
   DO j=jts,jte
   DO i=its,ite 
-    !!if (abs(float(j - jcm)) < 20.) then
-    !if (abs(grid%xlat(i,j)) < 5.) then   ! wrb: do half an eq beta plane
-    !  grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
-    !else
-    !  grid%ht(i,j) = 0.
-    !end if 
-! QN : add a Shi&Durran 2013 type mountain
-    if (abs(float(j-jcm))<yb) then
-      rmountain = sqrt((float(i-icm)/xa)**2)
-    else
-      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 )
-    end if
-    if (rmountain<1.) then
-      grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))
-    else
-      grid%ht(i,j) = 0.
-    end if
-! QN : END Shi&Durran 2013 type mountain
-    !grid%ht(i,j) = 0.
+    !QN : aquaplanet run here, no mountain
+    grid%ht(i,j) = 0.
     grid%phb(i,1,j) = g*grid%ht(i,j)
     grid%php(i,1,j) = 0.
     grid%ph0(i,1,j) = grid%phb(i,1,j)
