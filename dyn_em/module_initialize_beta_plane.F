@@ -428,7 +428,7 @@ CONTAINS
         grid%sst(i,j) = 273.15 + tmp*(27. - 0.) + 0. 
       end if
       !QN: increase SSTs by 2K uniformly to simulate 2*CO2
-      !grid%sst(i,j) = grid%sst(i,j) +2.
+      grid%sst(i,j) = grid%sst(i,j) +2.
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       

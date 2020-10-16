@@ -552,7 +552,7 @@ CONTAINS
     ELSE IF ((model .eq. "RRTM") .or. &
              (model .eq. "RRTMG")) THEN
        IF (tracer .eq. "CO2") THEN
-          out = 350.e-6
+          out = 700.e-6
 
        ELSE IF (tracer .eq. "N2O") THEN
           out = 319e-9
