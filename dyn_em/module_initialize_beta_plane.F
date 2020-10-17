@@ -139,6 +139,7 @@ CONTAINS
    ! wrb:
    INTEGER :: nyy, ig, jg
    REAL    :: jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
+   REAL    :: tmppi, es, qvs, temperature !qn : copied from jet input sounding, to compute humidity profile
    
 
    SELECT CASE ( model_data_order )
@@ -1122,7 +1123,13 @@ CONTAINS
     DO K = 1, kte-1
       p_level = grid%c3h(k)*(p_surf - grid%p_top) + grid%c4h(k) + grid%p_top
       grid%pb(i,k,j) = p_level
-      grid%t_init(i,k,j) = interp_0( theta, p_in, p_level, nl_in ) - t0
+      !QN : initialize temperature with a profile that approximates a constant lapse rate of 6.5K/km in the troposphere and negative lapse rate above, and surface temperature=sst. Made to fit the equilibrated coarse simulation
+      IF (grid%pb(i,k,j) > 16000.) THEN 
+        grid%t_init(i,k,j) = grid%sst(i,j) + 40. * (p1000mb - grid%pb(i,k,j)) / (p1000mb-16000.) - t0
+      ELSE
+        grid%t_init(i,k,j) = grid%sst(i,j) + 40. + (350. - grid%sst(i,j))*(16000. - grid%pb(i,k,j))/8000. - t0
+      ENDIF
+      
       grid%alb(i,k,j) = (r_d/p1000mb)*(grid%t_init(i,k,j)+t0)*(grid%pb(i,k,j)/p1000mb)**cvpm
     ENDDO
 !  calc hydrostatic balance (alternatively we could interp the geopotential from the
@@ -1150,16 +1157,6 @@ CONTAINS
                      nl_max, nl_in, theta_surf )
   ENDIF
   DO J = jts, min(jde-1,jte)
-  
-  IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
-!  get sounding for this point
-!   debug = .false.  !  this will turn off print of the sounding
-!    CALL get_sounding_b_wave( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-!                      nl_max, nl_in, u_jet, rho_jet, th_jet, z_jet,      &
-!                      nz_jet, ny_jet, j, .false.                          )
-      CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                     nl_max, nl_in, theta_surf)
-  ENDIF
   DO I = its, min(ide-1,ite)
 !  At this point grid%p_top is already set. find the DRY mass in the column
 !  by interpolating the DRY pressure.  
@@ -1172,9 +1169,21 @@ CONTAINS
 ! temperature and qv
     do k=1,kde-1
       p_level = grid%c3h(k)*(pd_surf - grid%p_top) + grid%c4h(k) + grid%p_top
-      moist(i,k,j,P_QV) = interp_0( qv, pd_in, p_level, nl_in )
-      grid%t_1(i,k,j)          = interp_0( theta, pd_in, p_level, nl_in ) - t0
+      !moist(i,k,j,P_QV) = interp_0( qv, pd_in, p_level, nl_in )
+      !QN = Enforce moisture to be constant 80% relative humidity
+      tmppi=(p_level/p1000mb)**rcp                                                  !QN (all copied from input_jet)
+      temperature = tmppi*(grid%t_init(i,k,j) + t0)                                 !QN
+      if (temperature .gt. svpt0) then                                              !QN
+         es  = 1000.*svp1*exp(svp2*(temperature-svpt0)/(temperature-svp3))          !QN
+         qvs = ep_2*es/(p_level-es)                                                 !QN
+      else                                                                          !QN
+         es  = 1000.*svp1*exp( 21.8745584*(temperature-273.16)/(temperature-7.66) ) !QN
+         qvs = ep_2*es/(p_level-es)                                                 !QN
+      endif                                                                         !QN
+      moist(i,k,j,P_QV) = 0.8* qvs                                                  !QN
+      grid%t_1(i,k,j)          = grid%t_init(i,k,j)
       grid%t_2(i,k,j)          = grid%t_1(i,k,j)
+
       
     enddo
 !  integrate the hydrostatic equation (from the RHS of the bigstep
@@ -1230,7 +1239,11 @@ CONTAINS
   IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
     DO K = 1, kte
       p_level = grid%c3h(k)*(p_surf - grid%p_top) + grid%c4h(k) + grid%p_top
-      grid%u_1(i,k,j) = interp_0( u, p_in, p_level, nl_in )
+      IF (abs(grid%xlat(i,j)) < 48.3) THEN
+        grid%u_1(i,k,j) = -1.45e-5 * (grid%xlat(i,j))**4 + 3.49e-2 * (grid%xlat(i,j))**2 - 2.34
+      ELSE
+        grid%u_1(i,k,j) = 0.
+      ENDIF
       grid%u_2(i,k,j) = grid%u_1(i,k,j)
     ENDDO
   ENDIF
