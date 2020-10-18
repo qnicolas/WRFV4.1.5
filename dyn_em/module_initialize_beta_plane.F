@@ -139,8 +139,7 @@ CONTAINS
    ! wrb:
    INTEGER :: nyy, ig, jg
    REAL    :: jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
-   REAL    :: tmppi, es, qvs, temperature !qn : copied from jet input sounding, to compute humidity profile
-   
+   INTEGER :: filenb !QN : input_sounding file number
 
    SELECT CASE ( model_data_order )
          CASE ( DATA_ORDER_ZXY )
@@ -868,29 +867,13 @@ CONTAINS
 
    CASE (beta_plane)
 
-!  write(6,*) ' reading input jet sounding '
-!  call read_input_jet( u_jet, rho_jet, th_jet, z_jet, nz_jet, ny_jet )
-
    write(6,*) ' getting dry sounding for base state '
-!  write(6,*) ' using middle column in jet sounding, j = ',ny_jet/2
-
    dry_sounding   = .true.
-!   debug = .true.  !  this will produce print of the sounding (last argument)
-! wrb:  maybe need to change to generic get_sounding()
-!  CALL get_sounding_b_wave( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-!                      nl_max, nl_in, u_jet, rho_jet, th_jet, z_jet,      &
-!                      nz_jet, ny_jet, ny_jet/2, .true.                   )
-   CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                     nl_max, nl_in, theta_surf)
+   filenb = 1 !QN : here, the call to get_sounding is only used to get ptop. Which input file you read doesn't matter, given that they should all have the same ptop.
+   CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, filenb)
 
    write(6,*) ' returned from reading sounding, nl_in is ',nl_in
-
-!  find ptop for the desired ztop (ztop is input from the namelist),
-!  and find surface pressure
-
-!  For the jet, using the middle column for the base state means that
-!  we will be extrapolating above the highest height data to the south
-!  of the centerline.
 
 
    CASE DEFAULT
@@ -1112,6 +1095,17 @@ CONTAINS
   END SELECT ideal_terrain
 
   DO J = jts, jte
+  IF (abs(grid%xlat(1,J))<10) THEN
+    filenb = 1
+  ELSE IF (abs(grid%xlat(1,J))<30) THEN
+    filenb = 2
+  ELSE IF (abs(grid%xlat(1,J))<50) THEN
+    filenb = 3
+  ELSE
+    filenb = 4
+  END IF
+  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, filenb)
   DO I = its, ite
 
     p_surf = interp_0( p_in, zk, grid%phb(i,1,j)/g, nl_in )
@@ -1123,13 +1117,7 @@ CONTAINS
     DO K = 1, kte-1
       p_level = grid%c3h(k)*(p_surf - grid%p_top) + grid%c4h(k) + grid%p_top
       grid%pb(i,k,j) = p_level
-      !QN : initialize temperature with a profile that approximates a constant lapse rate of 6.5K/km in the troposphere and negative lapse rate above, and surface temperature=sst. Made to fit the equilibrated coarse simulation
-      IF (grid%pb(i,k,j) > 16000.) THEN 
-        grid%t_init(i,k,j) = grid%sst(i,j) + 40. * (p1000mb - grid%pb(i,k,j)) / (p1000mb-16000.) - t0
-      ELSE
-        grid%t_init(i,k,j) = grid%sst(i,j) + 40. + (350. - grid%sst(i,j))*(16000. - grid%pb(i,k,j))/8000. - t0
-      ENDIF
-      
+      grid%t_init(i,k,j) = interp_0( theta, p_in, p_level, nl_in ) - t0
       grid%alb(i,k,j) = (r_d/p1000mb)*(grid%t_init(i,k,j)+t0)*(grid%pb(i,k,j)/p1000mb)**cvpm
     ENDDO
 !  calc hydrostatic balance (alternatively we could interp the geopotential from the
@@ -1157,6 +1145,21 @@ CONTAINS
                      nl_max, nl_in, theta_surf )
   ENDIF
   DO J = jts, min(jde-1,jte)
+  
+  IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
+!  get sounding for this point
+  IF (abs(grid%xlat(1,J))<10) THEN
+    filenb = 1
+  ELSE IF (abs(grid%xlat(1,J))<30) THEN
+    filenb = 2
+  ELSE IF (abs(grid%xlat(1,J))<50) THEN
+    filenb = 3
+  ELSE
+    filenb = 4
+  END IF
+  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, filenb)
+  ENDIF
   DO I = its, min(ide-1,ite)
 !  At this point grid%p_top is already set. find the DRY mass in the column
 !  by interpolating the DRY pressure.  
@@ -1169,21 +1172,9 @@ CONTAINS
 ! temperature and qv
     do k=1,kde-1
       p_level = grid%c3h(k)*(pd_surf - grid%p_top) + grid%c4h(k) + grid%p_top
-      !moist(i,k,j,P_QV) = interp_0( qv, pd_in, p_level, nl_in )
-      !QN = Enforce moisture to be constant 80% relative humidity
-      tmppi=(p_level/p1000mb)**rcp                                                  !QN (all copied from input_jet)
-      temperature = tmppi*(grid%t_init(i,k,j) + t0)                                 !QN
-      if (temperature .gt. svpt0) then                                              !QN
-         es  = 1000.*svp1*exp(svp2*(temperature-svpt0)/(temperature-svp3))          !QN
-         qvs = ep_2*es/(p_level-es)                                                 !QN
-      else                                                                          !QN
-         es  = 1000.*svp1*exp( 21.8745584*(temperature-273.16)/(temperature-7.66) ) !QN
-         qvs = ep_2*es/(p_level-es)                                                 !QN
-      endif                                                                         !QN
-      moist(i,k,j,P_QV) = 0.8* qvs                                                  !QN
-      grid%t_1(i,k,j)          = grid%t_init(i,k,j)
+      moist(i,k,j,P_QV) = interp_0( qv, pd_in, p_level, nl_in )
+      grid%t_1(i,k,j)          = interp_0( theta, pd_in, p_level, nl_in ) - t0
       grid%t_2(i,k,j)          = grid%t_1(i,k,j)
-
       
     enddo
 !  integrate the hydrostatic equation (from the RHS of the bigstep
@@ -1239,11 +1230,7 @@ CONTAINS
   IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
     DO K = 1, kte
       p_level = grid%c3h(k)*(p_surf - grid%p_top) + grid%c4h(k) + grid%p_top
-      IF (abs(grid%xlat(i,j)) < 48.3) THEN
-        grid%u_1(i,k,j) = -1.45e-5 * (grid%xlat(i,j))**4 + 3.49e-2 * (grid%xlat(i,j))**2 - 2.34
-      ELSE
-        grid%u_1(i,k,j) = 0.
-      ENDIF
+      grid%u_1(i,k,j) = interp_0( u, p_in, p_level, nl_in )
       grid%u_2(i,k,j) = grid%u_1(i,k,j)
     ENDDO
   ENDIF
@@ -2108,6 +2095,130 @@ CONTAINS
      end if
 
       end subroutine get_sounding
+      
+!---------------------------------------------------------------------------
+! QN : same as get_sounding, but integrating pressure from the top. Necessary if you want to use different input soundingd for different latitudes; so that grid%ptop is always the same.
+! note the first line of the model needs to contain top-of-model values.
+! also doesn't handle moisture (moisture values will all be zero)
+! also the th_surf value returned is just the bottom theta value, but I don't need that value for the beta_plane case anyway
+
+      subroutine get_sounding_reversed( zk, p, p_dry, theta, rho, &
+                               u, v, qv, dry, nl_max, nl_in, th_surf, filenb )
+      implicit none
+
+      integer nl_max, nl_in, filenb
+      real zk(nl_max), p(nl_max), theta(nl_max), rho(nl_max), &
+           u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max)
+      logical dry
+
+      integer n, iz
+      parameter(n=1000)
+      logical debug
+      parameter( debug = .true.)
+      character*256 message
+
+! input sounding data
+
+      real p_surf, th_surf, qv_surf
+      real p_top, th_top, qv_top
+      real pi_surf, pi_top, pi(n)
+      real h_input(n), th_input(n), qv_input(n), u_input(n), v_input(n)
+
+! diagnostics
+
+      real rho_surf, rho_top, p_input(n), rho_input(n)
+      real pm_input(n)  !  this are for full moist sounding
+
+! local data
+
+      real r
+      parameter (r = r_d)
+      integer k, it, nl
+      real qvf, qvf1, dz
+
+!  first, read the sounding
+
+      call read_sounding_customfile( p_top, th_top, qv_top, &
+                          h_input, th_input, qv_input, u_input, v_input,n, nl, filenb, debug )
+
+       do k=1,nl
+         qv_input(k) = 0.
+       enddo
+
+      if(debug) write(6,*) ' number of input levels = ',nl
+
+        nl_in = nl
+        if(nl_in .gt. nl_max ) then
+          write(6,*) ' too many levels for input arrays ',nl_in,nl_max
+          call wrf_error_fatal ( ' too many levels for input arrays ' )
+        end if
+
+!  compute diagnostics,
+
+      p_top = 100.*p_top  ! convert to pascals
+      rho_top = 1./((r/p1000mb)*th_top*((p_top/p1000mb)**cvpm))
+      pi_top = (p_top/p1000mb)**(r/cp)
+
+      if(debug) then
+        write(6,*) ' top density is ',rho_top
+        write(6,*) ' top pi is      ',pi_top
+      end if
+
+
+!  integrate moist sounding hydrostatically, starting from the
+!  specified top pressure
+!  -> first, integrate from top to highest level
+
+          rho_input(nl) = rho_top
+          pm_input(nl)  = p_top
+
+! integrate down the column
+
+          do k=nl-1,1,-1
+            rho_input(k) = rho_input(k+1)
+            dz = h_input(k+1)-h_input(k)
+            do it=1,10
+              pm_input(k) = pm_input(k+1) &
+                      + 0.5*dz*(rho_input(k)+rho_input(k+1))*g
+              IF(pm_input(k) .LE. 0. )THEN
+                CALL wrf_message("Integrated pressure has gone negative in get_sounding_reversed - too cold for chosen height")
+                WRITE(message,*)'k,pm_input(k),h_input(k),th_input(k) = ',k,pm_input(k),h_input(k),th_input(k)
+                CALL wrf_error_fatal ( message )
+              ENDIF
+              rho_input(k) = 1./((r/p1000mb)*th_input(k)*((pm_input(k)/p1000mb)**cvpm))
+            enddo
+          enddo
+
+!  we have the moist sounding, which is also the dry sounding because this function doesn't handle moisture.
+
+          do k=1,nl
+            p_input(k) = pm_input(k)
+          enddo
+
+        th_surf = th_input(1)
+        do k=1,nl
+
+          zk(k) = h_input(k)
+          p(k) = pm_input(k)
+          p_dry(k) = p_input(k)
+          theta(k) = th_input(k)
+          rho(k) = rho_input(k)
+          u(k) = u_input(k)
+          v(k) = v_input(k)
+          qv(k) = qv_input(k)
+
+        enddo
+
+     if(debug) then
+      write(6,*) ' sounding '
+      write(6,*) '  k  height(m)  press (Pa) pd(Pa) theta (K) den(kg/m^3)  u(m/s)     v(m/s)    qv(g/g) '
+      do k=1,nl
+        write(6,'(1x,i3,8(1x,1pe10.3))') k, zk(k), p(k), p_dry(k), theta(k), rho(k), u(k), v(k), qv(k)
+      enddo
+
+     end if
+
+      end subroutine get_sounding_reversed
 
 !-------------------------------------------------------
 
@@ -2148,6 +2259,49 @@ CONTAINS
       close(unit=10,status = 'keep')
 
       end subroutine read_sounding
+      
+!-------------------------------------------------------
+
+      subroutine read_sounding_customfile( ps,ts,qvs,h,th,qv,u,v,n,nl,filenb,debug )
+      implicit none
+      integer n,nl,filenb
+      real ps,ts,qvs,h(n),th(n),qv(n),u(n),v(n)
+      logical end_of_file
+      logical debug
+      character(len=256) :: filename
+
+      integer k
+      
+      write (filename, "(A14,I0.2)") "input_sounding", filenb
+
+      open(unit=10,file=filename,form='formatted',status='old')
+      rewind(10)
+      read(10,*) ps, ts, qvs
+      if(debug) then
+        write(6,*) ' input sounding surface parameters '
+        write(6,*) ' surface pressure (mb) ',ps
+        write(6,*) ' surface pot. temp (K) ',ts
+        write(6,*) ' surface mixing ratio (g/kg) ',qvs
+      end if
+
+      end_of_file = .false.
+      k = 0
+
+      do while (.not. end_of_file)
+
+        read(10,*,end=100) h(k+1), th(k+1), qv(k+1), u(k+1), v(k+1)
+        k = k+1
+        if(debug) write(6,'(1x,i3,5(1x,e10.3))') k, h(k), th(k), qv(k), u(k), v(k)
+        go to 110
+ 100    end_of_file = .true.
+ 110    continue
+      enddo
+
+      nl = k
+
+      close(unit=10,status = 'keep')
+
+      end subroutine read_sounding_customfile
 
 !------------------------------------------------------------------
 
