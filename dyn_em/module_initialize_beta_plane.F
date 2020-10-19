@@ -869,9 +869,9 @@ CONTAINS
 
    write(6,*) ' getting dry sounding for base state '
    dry_sounding   = .true.
-   filenb = 1 !QN : here, the call to get_sounding is only used to get ptop. Which input file you read doesn't matter, given that they should all have the same ptop.
+   filenb = 1 !QN : here, the call to get_sounding is only used to get ptop. Which SST you input doesn't matter, given that ptop should be the same no matter what the SST.
    CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf, filenb)
+                      nl_max, nl_in, theta_surf, 300.)
 
    write(6,*) ' returned from reading sounding, nl_in is ',nl_in
 
@@ -1095,17 +1095,8 @@ CONTAINS
   END SELECT ideal_terrain
 
   DO J = jts, jte
-  IF (abs(grid%xlat(1,J))<10) THEN
-    filenb = 1
-  ELSE IF (abs(grid%xlat(1,J))<30) THEN
-    filenb = 2
-  ELSE IF (abs(grid%xlat(1,J))<50) THEN
-    filenb = 3
-  ELSE
-    filenb = 4
-  END IF
   CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf, filenb)
+                      nl_max, nl_in, theta_surf, grid%sst(1,J))
   DO I = its, ite
 
     p_surf = interp_0( p_in, zk, grid%phb(i,1,j)/g, nl_in )
@@ -1148,17 +1139,8 @@ CONTAINS
   
   IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
 !  get sounding for this point
-  IF (abs(grid%xlat(1,J))<10) THEN
-    filenb = 1
-  ELSE IF (abs(grid%xlat(1,J))<30) THEN
-    filenb = 2
-  ELSE IF (abs(grid%xlat(1,J))<50) THEN
-    filenb = 3
-  ELSE
-    filenb = 4
-  END IF
   CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf, filenb)
+                      nl_max, nl_in, theta_surf, grid%sst(1,J))
   ENDIF
   DO I = its, min(ide-1,ite)
 !  At this point grid%p_top is already set. find the DRY mass in the column
@@ -2097,18 +2079,19 @@ CONTAINS
       end subroutine get_sounding
       
 !---------------------------------------------------------------------------
-! QN : same as get_sounding, but integrating pressure from the top. Necessary if you want to use different input soundingd for different latitudes; so that grid%ptop is always the same.
-! note the first line of the model needs to contain top-of-model values.
+! QN : same as get_sounding, but integrating pressure from the top. Necessary if you want to adapt the sounding to the SST; so that grid%ptop is always the same.
+! note the first line of input_sounding_beta_plane needs to contain top-of-model values.
+! The theta values in the sounding are not used.
 ! also doesn't handle moisture (moisture values will all be zero)
 ! also the th_surf value returned is just the bottom theta value, but I don't need that value for the beta_plane case anyway
 
       subroutine get_sounding_reversed( zk, p, p_dry, theta, rho, &
-                               u, v, qv, dry, nl_max, nl_in, th_surf, filenb )
+                               u, v, qv, dry, nl_max, nl_in, th_surf, sst )
       implicit none
 
-      integer nl_max, nl_in, filenb
+      integer nl_max, nl_in
       real zk(nl_max), p(nl_max), theta(nl_max), rho(nl_max), &
-           u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max)
+           u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max), sst
       logical dry
 
       integer n, iz
@@ -2135,11 +2118,12 @@ CONTAINS
       parameter (r = r_d)
       integer k, it, nl
       real qvf, qvf1, dz
+      real tropheight !QN : tropopause height 
 
 !  first, read the sounding
 
-      call read_sounding_customfile( p_top, th_top, qv_top, &
-                          h_input, th_input, qv_input, u_input, v_input,n, nl, filenb, debug )
+      call read_sounding_beta_plane( p_top, th_top, qv_top, &
+                          h_input, th_input, qv_input, u_input, v_input,n, nl, debug )
 
        do k=1,nl
          qv_input(k) = 0.
@@ -2153,9 +2137,20 @@ CONTAINS
           call wrf_error_fatal ( ' too many levels for input arrays ' )
         end if
 
+!  compute the temperature profile
+      tropheight = 9000.+6000.*(sst-273.15)/27.
+      do k=1,nl
+        if (h_input(k)<=tropheight) then
+          th_input(k) = sst + h_input(k)*3.5e-3 -6.67
+        else
+          th_input(k) = sst + tropheight*3.5e-3 + (h_input(k)-tropheight)*12e-3 -6.67
+        endif
+      enddo
+      th_top=th_input(nl)
+
 !  compute diagnostics,
 
-      p_top = 100.*p_top  ! convert to pascals
+      p_top = 8801.  ! override ptop anyways, just to be sure that we get the right surface pressure
       rho_top = 1./((r/p1000mb)*th_top*((p_top/p1000mb)**cvpm))
       pi_top = (p_top/p1000mb)**(r/cp)
 
@@ -2262,19 +2257,16 @@ CONTAINS
       
 !-------------------------------------------------------
 
-      subroutine read_sounding_customfile( ps,ts,qvs,h,th,qv,u,v,n,nl,filenb,debug )
+      subroutine read_sounding_beta_plane( ps,ts,qvs,h,th,qv,u,v,n,nl,debug )
       implicit none
-      integer n,nl,filenb
+      integer n,nl
       real ps,ts,qvs,h(n),th(n),qv(n),u(n),v(n)
       logical end_of_file
       logical debug
-      character(len=256) :: filename
 
       integer k
-      
-      write (filename, "(A14,I0.2)") "input_sounding", filenb
 
-      open(unit=10,file=filename,form='formatted',status='old')
+      open(unit=10,file='input_sounding_beta_plane',form='formatted',status='old')
       rewind(10)
       read(10,*) ps, ts, qvs
       if(debug) then
@@ -2301,7 +2293,7 @@ CONTAINS
 
       close(unit=10,status = 'keep')
 
-      end subroutine read_sounding_customfile
+      end subroutine read_sounding_beta_plane
 
 !------------------------------------------------------------------
 
