@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 100,
+ run_days                            = 300,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -30,9 +30,9 @@
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 81,
+ e_we                                = 41,
  s_sn                                = 1,
- e_sn                                = 141,
+ e_sn                                = 101,
  s_vert                              = 1,
  e_vert                              = 39,
  dx                                  = 100000,
