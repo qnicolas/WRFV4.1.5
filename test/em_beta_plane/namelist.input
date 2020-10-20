@@ -1,42 +1,47 @@
  &time_control
- run_days                            = 420,
+ run_days                            = 0,
  run_hours                           = 0,
- run_minutes                         = 0,
+ run_minutes                         = 22,
  run_seconds                         = 0,
- start_year                          = 1970,
- start_month                         = 01,
- start_day                           = 01,
- start_hour                          = 00,
- start_minute                        = 00,
+ start_year                          = 1969,
+ start_month                         = 12,
+ start_day                           = 31,
+ start_hour                          = 23,
+ start_minute                        = 58,
  start_second                        = 00,
- history_interval                    = 360,
- frames_per_outfile                  = 40,
+ history_interval                    = 10,
+ history_begin_m                     = 04,
+ frames_per_outfile                  = 1,
  restart                             = .false.,
- restart_interval                    = 43200,
- io_form_history                     = 2
- io_form_restart                     = 2
- io_form_input                       = 2
- io_form_boundary                    = 2
-! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp/test/em_beta_plane/wrfpout_d<domain>_<date>"
+ restart_interval                    = 20,
+ io_form_history                     = 11
+ io_form_restart                     = 102
+ io_form_input                       = 11
+ io_form_boundary                    = 11
+! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp_crosseq/test/em_beta_plane/wrfpout_d<domain>_<date>"
 ! auxhist23_interval                  = 60,
 ! frames_per_auxhist23                = 240,
 ! io_form_auxhist23                   = 2,
+ nocolons                            = T,
  /
 
  &domains
+ numtiles                            = 1
+ nproc_x                             = 15
+ nproc_y                             = 88
  use_adaptive_time_step              = .false.,
- time_step                           = 200,
+ time_step                           = 24,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 81,
+ e_we                                = 1501,
  s_sn                                = 1,
- e_sn                                = 141,
+ e_sn                                = 3501,
  s_vert                              = 1,
  e_vert                              = 39,
- dx                                  = 100000,
- dy                                  = 100000,
+ dx                                  = 4000,
+ dy                                  = 4000,
  ztop                                = 16000,
  grid_id                             = 1,
  parent_id                           = 0,
@@ -49,25 +54,25 @@
  /
 
  &physics
- mp_physics                          = 6,
- cu_physics                          = 16,
+ mp_physics                          = 8,
+ cu_physics                          = 0,
  ra_lw_physics                       = 24,
  ra_sw_physics                       = 24,
- bl_pbl_physics                      = 1,
- sf_sfclay_physics                   = 91,
+ bl_pbl_physics                      = 2,
+ sf_sfclay_physics                   = 2,
  sf_surface_physics                  = 4,
- radt                                = 180,
+ radt                                = 60,
  bldt                                = 0,
  cudt                                = 5,
  isfflx                              = 1
  /
 
  &noah_mp
- dveg				     = 4,
- opt_tbot			     = 1, !used to enforce zero flux at the bottom of the soil layer 
- opt_crs=1
- opt_sfc=1
- opt_btr=1
+ dveg                                = 4,
+ opt_tbot                            = 1, !used to enforce zero flux at the bottom of the soil layer 
+ opt_crs                             = 1,
+ opt_sfc                             = 1,
+ opt_btr                             = 1,
  /
 
  &fdda
@@ -111,8 +116,8 @@
  /
 
  &namelist_quilt
- nio_tasks_per_group = 0,
- nio_groups = 1,
+ nio_tasks_per_group = 8,
+ nio_groups = 8,
  /
 
  &ideal
