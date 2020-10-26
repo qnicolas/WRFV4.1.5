@@ -869,8 +869,8 @@ CONTAINS
    write(6,*) ' getting dry sounding for base state '
 
    dry_sounding   = .true.
-   CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf, 300.)
+   CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf)
 
    write(6,*) ' returned from reading sounding, nl_in is ',nl_in
 
@@ -900,7 +900,7 @@ CONTAINS
 !  and find surface pressure
    END SELECT ideal_sounding
 
-  grid%p_top = 8801.
+  grid%p_top = interp_0( p_in, zk, config_flags%ztop, nl_in )
 
 !  Fill in the hybrid coordinate coefficients
 
@@ -1094,8 +1094,6 @@ CONTAINS
   END SELECT ideal_terrain
 
   DO J = jts, jte
-  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                             nl_max, nl_in, theta_surf, grid%sst(1,J))
   DO I = its, ite
 
     p_surf = interp_0( p_in, zk, grid%phb(i,1,j)/g, nl_in )
@@ -1125,21 +1123,10 @@ CONTAINS
   ENDIF
 !  calculate full state for each column - this includes moisture.
   write(6,*) ' getting moist sounding for full state '
-! change this to get moist instead of dry sounding:
-  IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
-    dry_sounding = .true.
-    IF (config_flags%mp_physics /= 0)  dry_sounding = .false.
-  ELSE
-    dry_sounding = .false.
-    CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+  dry_sounding = .false.
+  CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
                      nl_max, nl_in, theta_surf )
-  ENDIF
   DO J = jts, min(jde-1,jte)
-  IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
-!  get sounding for this point
-  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf, grid%sst(1,J))
-  ENDIF
   DO I = its, min(ide-1,ite)
 !  At this point grid%p_top is already set. find the DRY mass in the column
 !  by interpolating the DRY pressure.  
@@ -2075,130 +2062,6 @@ CONTAINS
      end if
 
       end subroutine get_sounding
-
-!-------------------------------------------------------
-!This subrooutine emulates the results of get_sounding with a temperature profile that depends on the input sst. The moist pressure array is always the same; the temperature is imposed as a function of p and sst; and the geopotential is then diagnosed. ptop is fixed in the code above, instead of interpolated to comply with the imposed ztop in the namelist.
-      subroutine get_sounding_reversed( zk, p, p_dry, theta, rho, &
-                               u, v, qv, dry, nl_max, nl_in, th_surf, sst )
-      implicit none
-
-      integer nl_max, nl_in
-      real zk(nl_max), p(nl_max), theta(nl_max), rho(nl_max), &
-           u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max), sst
-      logical dry
-
-      integer n, iz
-      parameter(n=1000)
-      logical debug
-      parameter( debug = .true.)
-      character*256 message
-
-! input sounding data
-
-      real p_surf, th_surf, qv_surf
-      real p_top, th_top, qv_top
-      real pi_surf, pi_top, pi(n)
-      real h_input(n), th_input(n), qv_input(n), u_input(n), v_input(n)
-
-! diagnostics
-
-      real rho_surf, rho_top, p_input(n), rho_input(n)
-      real pm_input(n)  
-
-! local data
-
-      real r
-      parameter (r = r_d)
-      integer k, it, nl
-      real qvf, qvf1, dp
-      real tropheight 
-
-! first, create the z array and u,v,theta(z) profiels
-      nl = 232
-      
-      pm_input(1) = 100000.
-      do k=2,nl
-        pm_input(k) = pm_input(k-1)-400.
-      enddo
-
-      do k=1,nl
-        qv_input(k) = 0.
-      enddo
-      do k=1,nl
-        u_input(k) = 10.
-      enddo
-      do k=1,nl
-        v_input(k) = 0.
-      enddo
-
-      if(debug) write(6,*) ' number of input levels = ',nl
-
-        nl_in = nl
-        if(nl_in .gt. nl_max ) then
-          write(6,*) ' too many levels for input arrays ',nl_in,nl_max
-          call wrf_error_fatal ( ' too many levels for input arrays ' )
-        end if
-
-
-      do k=1,nl
-        if (pm_input(k) >= 16000.) then 
-          th_input(k) = sst + 40. * (100000. - pm_input(k)) / (100000.-16000.)
-        else
-          th_input(k) = sst + 40. + (350. - sst)*(16000. - pm_input(k))/8000.
-        endif
-        th_surf=th_input(1)
-      enddo
-
-
-      p_surf = pm_input(1)
-      rho_surf = 1./((r/p1000mb)*th_surf*((p_surf/p1000mb)**cvpm))
-      pi_surf = (p_surf/p1000mb)**(r/cp)
-
-      if(debug) then
-        write(6,*) ' surface density is ',rho_surf
-        write(6,*) ' surface pi is      ',pi_surf
-      end if
-
-
-      rho_input(1) = rho_surf
-      h_input(1) = 0.
-
-
-! Now, integrate the gropotential from the bottom
-      do k=2,nl
-        rho_input(k) = 1./((r/p1000mb)*th_input(k)*((pm_input(k)/p1000mb)**cvpm))
-        dp = pm_input(k)-pm_input(k-1)
-        h_input(k) = h_input(k-1) - dp/(0.5*(rho_input(k)+rho_input(k-1))*g)
-      enddo
-
-!  we have the moist sounding, which is also the dry sounding because this function doesn't handle moisture.
-
-      do k=1,nl
-        p_input(k) = pm_input(k)
-      enddo
-
-      do k=1,nl
-
-        zk(k) = h_input(k)
-        p(k) = pm_input(k)
-        p_dry(k) = p_input(k)
-        theta(k) = th_input(k)
-        rho(k) = rho_input(k)
-        u(k) = u_input(k)
-        v(k) = v_input(k)
-        qv(k) = qv_input(k)
-
-      enddo
-
-      if(debug) then
-       write(6,*) ' sounding '
-       write(6,*) '  k  height(m)  press (Pa) pd(Pa) theta (K) den(kg/m^3)  u(m/s)     v(m/s)    qv(g/g) '
-       do k=1,nl
-         write(6,'(1x,i3,8(1x,1pe10.3))') k, zk(k), p(k), p_dry(k), theta(k), rho(k), u(k), v(k), qv(k)
-       enddo
-      end if
-
-      end subroutine get_sounding_reversed
 
 !-------------------------------------------------------
 
