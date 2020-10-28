@@ -869,8 +869,8 @@ CONTAINS
    write(6,*) ' getting dry sounding for base state '
 
    dry_sounding   = .true.
-   CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                      nl_max, nl_in, theta_surf)
+   CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, 300.)
 
    write(6,*) ' returned from reading sounding, nl_in is ',nl_in
 
@@ -900,7 +900,7 @@ CONTAINS
 !  and find surface pressure
    END SELECT ideal_sounding
 
-  grid%p_top = interp_0( p_in, zk, config_flags%ztop, nl_in )
+  grid%p_top = 8801.!interp_0( p_in, zk, config_flags%ztop, nl_in )
 
 !  Fill in the hybrid coordinate coefficients
 
@@ -1094,6 +1094,8 @@ CONTAINS
   END SELECT ideal_terrain
 
   DO J = jts, jte
+  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, grid%sst(1,J))
   DO I = its, ite
 
     p_surf = interp_0( p_in, zk, grid%phb(i,1,j)/g, nl_in )
@@ -1127,6 +1129,11 @@ CONTAINS
   CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
                      nl_max, nl_in, theta_surf )
   DO J = jts, min(jde-1,jte)
+  IF ( model_config_rec%ideal_case .EQ. beta_plane)THEN
+!  get sounding for this point
+  CALL get_sounding_reversed( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
+                      nl_max, nl_in, theta_surf, grid%sst(1,J))
+  ENDIF
   DO I = its, min(ide-1,ite)
 !  At this point grid%p_top is already set. find the DRY mass in the column
 !  by interpolating the DRY pressure.  
@@ -2062,6 +2069,155 @@ CONTAINS
      end if
 
       end subroutine get_sounding
+
+!-------------------------------------------------------
+
+      subroutine get_sounding_reversed( zk, p, p_dry, theta, rho, &
+                               u, v, qv, dry, nl_max, nl_in, th_surf, sst )
+      implicit none
+
+      integer nl_max, nl_in
+      real zk(nl_max), p(nl_max), theta(nl_max), rho(nl_max), &
+           u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max), sst
+      logical dry
+
+      integer n, iz
+      parameter(n=1000)
+      logical debug
+      parameter( debug = .true.)
+      character*256 message
+
+! input sounding data
+
+      real p_surf, th_surf, qv_surf
+      real pi_surf, pi(n)
+      real h_input(n), th_input(n), qv_input(n), u_input(n), v_input(n)
+
+! diagnostics
+
+      real rho_surf, p_input(n), rho_input(n)
+      real pm_input(n)  !  this are for full moist sounding
+
+! local data
+
+      real r
+      parameter (r = r_d)
+      integer k, it, nl
+      real qvf, qvf1, dz
+
+!  first, read the sounding
+
+      call read_sounding( p_surf, th_surf, qv_surf, &
+                          h_input, th_input, qv_input, u_input, v_input,n, nl, debug )
+
+!  compute the temperature profile
+      th_surf = sst
+      do k=1,nl
+        th_input(k) = th_surf + 0.15/50. * (h_input(k)-h_input(1))
+      enddo
+
+      if(dry) then
+       do k=1,nl
+         qv_input(k) = 0.
+       enddo
+      endif
+
+      if(debug) write(6,*) ' number of input levels = ',nl
+
+        nl_in = nl
+        if(nl_in .gt. nl_max ) then
+          write(6,*) ' too many levels for input arrays ',nl_in,nl_max
+          call wrf_error_fatal ( ' too many levels for input arrays ' )
+        end if
+
+!  compute diagnostics,
+!  first, convert qv(g/kg) to qv(g/g)
+
+      do k=1,nl
+        qv_input(k) = 0.001*qv_input(k)
+      enddo
+
+      p_surf = 100.*p_surf  ! convert to pascals
+      qvf = 1. + rvovrd*qv_input(1)
+      rho_surf = 1./((r/p1000mb)*th_surf*qvf*((p_surf/p1000mb)**cvpm))
+      pi_surf = (p_surf/p1000mb)**(r/cp)
+
+      if(debug) then
+        write(6,*) ' surface density is ',rho_surf
+        write(6,*) ' surface pi is      ',pi_surf
+      end if
+
+
+!  integrate moist sounding hydrostatically, starting from the
+!  specified surface pressure
+!  -> first, integrate from surface to lowest level
+
+          qvf = 1. + rvovrd*qv_input(1)
+          qvf1 = 1. + qv_input(1)
+          rho_input(1) = rho_surf
+          dz = h_input(1)
+          do it=1,10
+            pm_input(1) = p_surf &
+                    - 0.5*dz*(rho_surf+rho_input(1))*g*qvf1
+            rho_input(1) = 1./((r/p1000mb)*th_input(1)*qvf*((pm_input(1)/p1000mb)**cvpm))
+          enddo
+
+! integrate up the column
+
+          do k=2,nl
+            rho_input(k) = rho_input(k-1)
+            dz = h_input(k)-h_input(k-1)
+            qvf1 = 0.5*(2.+(qv_input(k-1)+qv_input(k)))
+            qvf = 1. + rvovrd*qv_input(k)   ! qv is in g/kg here
+
+            do it=1,10
+              pm_input(k) = pm_input(k-1) &
+                      - 0.5*dz*(rho_input(k)+rho_input(k-1))*g*qvf1
+              IF(pm_input(k) .LE. 0. )THEN
+                CALL wrf_message("Integrated pressure has gone negative - too cold for chosen height")
+                WRITE(message,*)'k,pm_input(k),h_input(k),th_input(k) = ',k,pm_input(k),h_input(k),th_input(k)
+                CALL wrf_error_fatal ( message )
+              ENDIF
+              rho_input(k) = 1./((r/p1000mb)*th_input(k)*qvf*((pm_input(k)/p1000mb)**cvpm))
+            enddo
+          enddo
+
+!  we have the moist sounding
+
+!  next, compute the dry sounding using p at the highest level from the
+!  moist sounding and integrating down.
+
+        p_input(nl) = pm_input(nl)
+
+          do k=nl-1,1,-1
+            dz = h_input(k+1)-h_input(k)
+            p_input(k) = p_input(k+1) + 0.5*dz*(rho_input(k)+rho_input(k+1))*g
+          enddo
+
+
+        do k=1,nl
+
+          zk(k) = h_input(k)
+          p(k) = pm_input(k)
+          p_dry(k) = p_input(k)
+          theta(k) = th_input(k)
+          rho(k) = rho_input(k)
+          u(k) = u_input(k)
+          v(k) = v_input(k)
+          qv(k) = qv_input(k)
+
+        enddo
+
+     if(debug) then
+      write(6,*) ' sounding '
+      write(6,*) '  k  height(m)  press (Pa) pd(Pa) theta (K) den(kg/m^3)  u(m/s)     v(m/s)    qv(g/g) '
+      do k=1,nl
+        write(6,'(1x,i3,8(1x,1pe10.3))') k, zk(k), p(k), p_dry(k), theta(k), rho(k), u(k), v(k), qv(k)
+      enddo
+
+     end if
+
+      end subroutine get_sounding_reversed
 
 !-------------------------------------------------------
 
