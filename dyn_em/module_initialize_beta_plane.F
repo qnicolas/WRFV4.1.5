@@ -95,7 +95,8 @@ CONTAINS
    INTEGER :: nl_in, icount
 
 
-   INTEGER :: icm,jcm, ii, im1, jj, jm1, loop, error, fid, nxc, nyc, lm
+   INTEGER :: icm, ii, im1, jj, jm1, loop, error, fid, nxc, nyc, lm
+   REAL    :: jcm ! QN
    REAL    :: u_mean,v_mean, f0, p_surf, p_level, qvf, z_at_v, z_at_u
    REAL    :: z_scale, xrad, yrad, zrad, rad, delt, cof1, cof2
 !   REAL, EXTERNAL :: interp_0
@@ -137,8 +138,8 @@ CONTAINS
    LOGICAL, EXTERNAL :: wrf_dm_on_monitor
 
    ! wrb:
-   INTEGER :: nyy, jg, jcent
-   REAL    :: dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
+   INTEGER :: nyy, ig, jg
+   REAL    :: jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
    
 
    SELECT CASE ( model_data_order )
@@ -247,12 +248,12 @@ CONTAINS
 ! wrb:  add small narrow mountain:
    hm = 1000.
    !hm = 0.
-   xa = 130./100. !qn: for Shi&Durran type mountain
-   ya = 130./100. !qn: for Shi&Durran type mountain
-   yb = 500./100.  !qn: for Shi&Durran type mountain
+   xa = 100000./config_flags%dx !qn: for Shi&Durran type mountain
+   ya = 100000./config_flags%dy !qn: for Shi&Durran type mountain
+   yb = 500000./config_flags%dy  !qn: for Shi&Durran type mountain
    rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
-   icm = ide/2
-   jcm = 0
+   icm = (ide+ids)/2    ! not REAL(..), because I want the top of the mountain to sit on one grid cell, and not in between two cells
+   jcm = REAL(jde+jds-1)/2.
    !z_scale = 8000./config_flags%ztop
 
 ! Note: htbub, radbub, radz, tpbub set above as parameters
@@ -261,7 +262,7 @@ CONTAINS
    icen = ide/4
    jcen = jde/2  ! wrb: only used for eq beta plane
 
-   stretch_grid = .true.
+   stretch_grid = .false.
    delt = 0.
    z_scale = .50   ! wrb
 !   z_scale = 8000./config_flags%ztop
@@ -269,12 +270,11 @@ CONTAINS
    write(6,*) ' pi is ',pi
    nxc = (ide-ids)/4
    nyc = (jde-jds)/2
-! wrb:
-   nyy = jde-jds
-   jcent = REAL(nyy+1)/2.  ! wrb: only used for eq beta plane
-   ns_extent = 69.0
-   !dphi = 2.*ns_extent/REAL(nyy)  ! for equatorially centered beta plane
-   dphi = ns_extent/REAL(nyy)  ! for top half of eq beta plane
+
+   nyy = jde-jds            ! Number of grid cells in latitude
+   jcent = REAL(jde+jds-1)/2. ! Center grid cell (or between two grid cells if the number of cells is even) // qn : modified from wrb
+   ns_extent = REAL(nyy)*config_flags%dy/100000. !QN : full extent, from south of domain to north of domain
+   dphi = ns_extent/REAL(nyy)
 
   CASE (seabreeze2d_x)
 
@@ -407,9 +407,11 @@ CONTAINS
      DO i = its, ite
       ! jg is the J index in the global (domain) span of the array.
       jg = j - jds + 1  ! jds is not necessarily 1
+      ig = i - ids + 1  ! ids is not necessarily 1
 
-      ! grid%xlat(i,j)  = (REAL(jg)-jcent)*dphi  ! wrb: equatorial beta plane
-      grid%xlat(i,j)  = REAL(jg)*dphi  ! wrb: top half of equatorial beta plane
+      grid%xlong(i,j)  = REAL(ig-1)*config_flags%dx/100000.
+      grid%xlat(i,j)  = (REAL(jg)-jcent)*dphi  ! wrb: equatorial beta plane
+      ! grid%xlat(i,j)  = REAL(jg)*dphi  ! wrb: top half of equatorial beta plane
       !vlat       = grid%xlat(i,j) - 0.5*dphi
       !grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
       !grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
@@ -433,10 +435,10 @@ CONTAINS
       
       !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
       !height is re-computed later when we set the grid%ht variable
-      if (abs(float(j-jcm))<yb) then                                              ! qn : Shi&Durran 2013 type mountain
+      if (abs(float(j)-jcm)<yb) then                                              ! qn : Shi&Durran 2013 type mountain
         rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
       else
-        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
+        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
       end if
       if (rmountain<1.) then
         grid%landmask(i,j)  = 1
@@ -1044,10 +1046,10 @@ CONTAINS
     !  grid%ht(i,j) = 0.
     !end if 
 ! QN : add a Shi&Durran 2013 type mountain
-    if (abs(float(j-jcm))<yb) then
+    if (abs(float(j)-jcm)<yb) then
       rmountain = sqrt((float(i-icm)/xa)**2)
     else
-      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 )
+      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 )
     end if
     if (rmountain<1.) then
       grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))

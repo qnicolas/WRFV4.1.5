@@ -32,7 +32,7 @@
  s_we                                = 1,
  e_we                                = 81,
  s_sn                                = 1,
- e_sn                                = 71,
+ e_sn                                = 141,
  s_vert                              = 1,
  e_vert                              = 39,
  dx                                  = 100000,
