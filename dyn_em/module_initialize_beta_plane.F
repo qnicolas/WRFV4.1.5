@@ -247,8 +247,8 @@ CONTAINS
 ! wrb:  add small narrow mountain:
    hm = 1000.
    !hm = 0.
-   xa = 100000./config_flags%dx !qn: for Shi&Durran type mountain
-   ya = 100000./config_flags%dy !qn: for Shi&Durran type mountain
+   xa = 130000./config_flags%dx !qn: for Shi&Durran type mountain
+   ya = 130000./config_flags%dy !qn: for Shi&Durran type mountain
    yb = 500000./config_flags%dy  !qn: for Shi&Durran type mountain
    rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
    icm = (ide+ids)/2    ! not REAL(..), because I want the top of the mountain to sit on one grid cell, and not in between two cells
@@ -261,7 +261,7 @@ CONTAINS
    icen = ide/4
    jcen = jde/2  ! wrb: only used for eq beta plane
 
-   stretch_grid = .false.
+   stretch_grid = .true.
    delt = 0.
    z_scale = .50   ! wrb
 !   z_scale = 8000./config_flags%ztop
