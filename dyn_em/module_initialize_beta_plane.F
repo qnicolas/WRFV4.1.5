@@ -95,7 +95,7 @@ CONTAINS
    INTEGER :: nl_in, icount
 
 
-   INTEGER :: icm,jcm, ii, im1, jj, jm1, loop, error, fid, nxc, nyc, lm
+   INTEGER :: icm, ii, im1, jj, jm1, loop, error, fid, nxc, nyc, lm
    REAL    :: u_mean,v_mean, f0, p_surf, p_level, qvf, z_at_v, z_at_u
    REAL    :: z_scale, xrad, yrad, zrad, rad, delt, cof1, cof2
 !   REAL, EXTERNAL :: interp_0
@@ -138,7 +138,7 @@ CONTAINS
 
    ! wrb:
    INTEGER :: nyy, ig, jg
-   REAL    :: jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
+   REAL    :: jcm, jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
    
 
    SELECT CASE ( model_data_order )
@@ -252,7 +252,7 @@ CONTAINS
    yb = 500000./config_flags%dy  !qn: for Shi&Durran type mountain
    rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
    icm = (ide+ids)/2    ! not REAL(..), because I want the top of the mountain to sit on one grid cell, and not in between two cells
-   jcm = REAL(jde+jds)/2.
+   jcm = REAL(jde+jds-1)/2.
    !z_scale = 8000./config_flags%ztop
 
 ! Note: htbub, radbub, radz, tpbub set above as parameters
@@ -434,10 +434,10 @@ CONTAINS
       
       !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
       !height is re-computed later when we set the grid%ht variable
-      if (abs(float(j-jcm))<yb) then                                              ! qn : Shi&Durran 2013 type mountain
+      if (abs(float(j)-jcm)<yb) then                                              ! qn : Shi&Durran 2013 type mountain
         rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
       else
-        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
+        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
       end if
       if (rmountain<1.) then
         grid%landmask(i,j)  = 1
@@ -1045,10 +1045,10 @@ CONTAINS
     !  grid%ht(i,j) = 0.
     !end if 
 ! QN : add a Shi&Durran 2013 type mountain
-    if (abs(float(j-jcm))<yb) then
+    if (abs(float(j)-jcm)<yb) then
       rmountain = sqrt((float(i-icm)/xa)**2)
     else
-      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j-jcm))-yb)/ya)**2 )
+      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 )
     end if
     if (rmountain<1.) then
       grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))
