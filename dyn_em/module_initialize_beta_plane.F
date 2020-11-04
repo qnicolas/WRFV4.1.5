@@ -247,8 +247,8 @@ CONTAINS
 ! wrb:  add small narrow mountain:
    hm = 1000.
    !hm = 0.
-   xa = 100000./config_flags%dx !qn: for Shi&Durran type mountain
-   ya = 100000./config_flags%dy !qn: for Shi&Durran type mountain
+   xa = 130000./config_flags%dx !qn: for Shi&Durran type mountain
+   ya = 130000./config_flags%dy !qn: for Shi&Durran type mountain
    yb = 500000./config_flags%dy  !qn: for Shi&Durran type mountain
    rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
    icm = (ide+ids)/2    ! not REAL(..), because I want the top of the mountain to sit on one grid cell, and not in between two cells
@@ -409,14 +409,14 @@ CONTAINS
       ig = i - ids + 1  ! ids is not necessarily 1
 
       grid%xlong(i,j)  = REAL(ig-1)*config_flags%dx/100000.
-      grid%xlat(i,j)  = (REAL(jg)-jcent)*dphi  ! wrb: equatorial beta plane
+      grid%xlat(i,j)  = 10. !QN : f-plane
       ! grid%xlat(i,j)  = REAL(jg)*dphi  ! wrb: top half of equatorial beta plane
       !vlat       = grid%xlat(i,j) - 0.5*dphi
       !grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
       !grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
-      ! beta plane:
-      grid%e(i,j)     = 2*EOMEG !QN: Has to be set constant to conserve vorticity (cf Grimshaw 1975)
-      grid%f(i,j)     = 2*EOMEG*grid%xlat(i,j)*degrad
+      ! f-plane:
+      grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
+      grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
 
       !grid%sst(i,j)=300.
       ! use QOBS distribution of Neale and Hoskins Aquaplanet Experiment 
