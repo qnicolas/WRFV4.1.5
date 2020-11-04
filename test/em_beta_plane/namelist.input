@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 420,
+ run_days                            = 300,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -24,15 +24,17 @@
  /
 
  &domains
+ nproc_x = 10
+ nproc_y = 1
  use_adaptive_time_step              = .false.,
  time_step                           = 200,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 81,
+ e_we                                = 101,
  s_sn                                = 1,
- e_sn                                = 141,
+ e_sn                                = 11,
  s_vert                              = 1,
  e_vert                              = 39,
  dx                                  = 100000,
@@ -92,6 +94,7 @@
  h_sca_adv_order                     = 5,
  v_sca_adv_order                     = 3,
  non_hydrostatic                     = .true.,
+ pert_coriolis                       = .true.,
  /
 
  &bdy_control
@@ -100,9 +103,9 @@
  symmetric_xe                        = .false.,
  open_xs                             = .false.,
  open_xe                             = .false.,
- periodic_y                          = .false.,
- symmetric_ys                        = .true., 
- symmetric_ye                        = .true., 
+ periodic_y                          = .true.,
+ symmetric_ys                        = .false., 
+ symmetric_ye                        = .false., 
  open_ys                             = .false.,
  open_ye                             = .false.,
  /
