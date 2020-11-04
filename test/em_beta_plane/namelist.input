@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 420,
+ run_days                            = 80,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -12,31 +12,37 @@
  history_interval                    = 360,
  frames_per_outfile                  = 40,
  restart                             = .false.,
- restart_interval                    = 43200,
- io_form_history                     = 2
- io_form_restart                     = 2
- io_form_input                       = 2
- io_form_boundary                    = 2
-! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_bp/test/em_beta_plane/wrfpout_d<domain>_<date>"
-! auxhist23_interval                  = 60,
-! frames_per_auxhist23                = 240,
-! io_form_auxhist23                   = 2,
+ restart_interval                    = 14400,
+ io_form_history                     = 11
+ io_form_restart                     = 11
+ io_form_input                       = 11
+ io_form_boundary                    = 11
+ history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfout_d<domain>_<date>"
+ rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfrst_d<domain>_<date>"
+ auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfpout_d<domain>_<date>"
+ auxhist23_interval                  = 60,
+ frames_per_auxhist23                = 240,
+ io_form_auxhist23                   = 11,
+ nocolons			     = .true.
  /
 
  &domains
+ numtiles 			     = 1
+ nproc_x			     = 218
+ nproc_y			     = 3
  use_adaptive_time_step              = .false.,
- time_step                           = 200,
+ time_step                           = 18,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 81,
+ e_we                                = 3271,
  s_sn                                = 1,
- e_sn                                = 141,
+ e_sn                                = 67,
  s_vert                              = 1,
  e_vert                              = 39,
- dx                                  = 100000,
- dy                                  = 100000,
+ dx                                  = 3000,
+ dy                                  = 3000,
  ztop                                = 16000,
  grid_id                             = 1,
  parent_id                           = 0,
@@ -49,14 +55,14 @@
  /
 
  &physics
- mp_physics                          = 6,
- cu_physics                          = 16,
+ mp_physics                          = 8,
+ cu_physics                          = 0,
  ra_lw_physics                       = 24,
  ra_sw_physics                       = 24,
- bl_pbl_physics                      = 1,
- sf_sfclay_physics                   = 91,
+ bl_pbl_physics                      = 2,
+ sf_sfclay_physics                   = 2,
  sf_surface_physics                  = 4,
- radt                                = 180,
+ radt                                = 60,
  bldt                                = 0,
  cudt                                = 5,
  isfflx                              = 1
@@ -92,6 +98,7 @@
  h_sca_adv_order                     = 5,
  v_sca_adv_order                     = 3,
  non_hydrostatic                     = .true.,
+ pert_coriolis                       = .true.,
  /
 
  &bdy_control
@@ -100,9 +107,9 @@
  symmetric_xe                        = .false.,
  open_xs                             = .false.,
  open_xe                             = .false.,
- periodic_y                          = .false.,
- symmetric_ys                        = .true., 
- symmetric_ye                        = .true., 
+ periodic_y                          = .true.,
+ symmetric_ys                        = .false., 
+ symmetric_ye                        = .false., 
  open_ys                             = .false.,
  open_ye                             = .false.,
  /
@@ -111,16 +118,16 @@
  /
 
  &namelist_quilt
- nio_tasks_per_group = 0,
- nio_groups = 1,
+ nio_tasks_per_group = 3,
+ nio_groups = 2,
  /
 
  &ideal
  ideal_case = 7
  /
 
-! &diags
-! p_lev_diags = 1,
-! num_press_levels = 30,
-! press_levels = 100000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7000,5000,1000
-! /
+ &diags
+ p_lev_diags = 1,
+ num_press_levels = 30,
+ press_levels = 100000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7000,5000,1000
+ /
