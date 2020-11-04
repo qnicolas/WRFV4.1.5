@@ -30,7 +30,7 @@
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 51,
+ e_we                                = 41,
  s_sn                                = 1,
  e_sn                                = 101,
  s_vert                              = 1,
