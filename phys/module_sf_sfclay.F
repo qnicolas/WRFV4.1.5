@@ -904,8 +904,11 @@ CONTAINS
      ENDIF
 !                                                                               
       DO 370 I=its,ite
-        QFX(I)=FLQC(I)*(QSFC(I)-QX(I))                                     
-        QFX(I)=AMAX1(QFX(I),0.)                                            
+        !QFX(I)=FLQC(I)*(QSFC(I)-QX(I))
+        !QFX(I)=AMAX1(QFX(I),0.)
+        !QN : Fixed evaporation
+        QFX(I) = 5.2e-5
+        FLQC(I) = QFX(I)/(QSFC(I)-QX(I))
         LH(I)=XLV*QFX(I)
   370 CONTINUE                                                                 
                                                                                 
