@@ -261,7 +261,7 @@ CONTAINS
    icen = ide/4
    jcen = jde/2  ! wrb: only used for eq beta plane
 
-   stretch_grid = .true.
+   stretch_grid = .false.
    delt = 0.
    z_scale = .50   ! wrb
 !   z_scale = 8000./config_flags%ztop

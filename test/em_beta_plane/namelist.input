@@ -21,6 +21,7 @@
 ! auxhist23_interval                  = 60,
 ! frames_per_auxhist23                = 240,
 ! io_form_auxhist23                   = 2,
+ nocolons = .true.
  /
 
  &domains
@@ -30,7 +31,7 @@
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 81,
+ e_we                                = 51,
  s_sn                                = 1,
  e_sn                                = 101,
  s_vert                              = 1,
