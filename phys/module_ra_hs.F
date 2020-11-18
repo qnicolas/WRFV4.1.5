@@ -72,9 +72,14 @@ CONTAINS
       t_tend=-kkt*(t_phy(i,k,j)-teq)/sec_p_d  ! t_tend in kinetic K/s
 
       !RTHRATEN(I,K,J)=RTHRATEN(I,K,J)+t_tend/pi_phy(i,k,j)
-      !QN : fixed radiative cooling -1.5e-5 K/s (about -1.3K/day)
-      RTHRATEN(I,K,J)=-1.5e-5
-
+      !QN : fixed radiative cooling, with a spike at 900hPa and constant above 850hPa. Column mean is -1.5e-5 K/s (about -1.3K/day)
+      IF (p_phy(i,k,j)/p0 > 0.9) THEN
+          RTHRATEN(I,K,J)= (p_phy(i,k,j)/p0 - 1.)*4e-4
+      ELSE IF (p_phy(i,k,j)/p0 > 0.85) THEN
+          RTHRATEN(I,K,J)= (-4. - 20.*2.65*(p_phy(i,k,j)/p0-0.9))*1e-5
+      ELSE
+          RTHRATEN(I,K,J)=-1.35e-5
+      ENDIF
    ENDDO i_loop
    ENDDO k_loop
    ENDDO j_loop                                          
