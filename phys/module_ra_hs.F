@@ -39,8 +39,6 @@ CONTAINS
    INTEGER :: i,j,K,NK
    real :: delty,delthez,p0,sec_p_d,sigb,kka,kks,kkf,rcp
    real :: ttmp,teq,sig,sigterm,kkt,t_tend
-   !QN
-   real :: a0,a1,a2,a3,a4,pnorm
 
 !------------------------------------------------------------------
 ! Newtonian relaxation scheme from Held and Suarez, Bull. Amer. Met.
@@ -61,18 +59,10 @@ CONTAINS
    k_loop: DO K=kts,MIN(kte,kde-1)
    i_loop: DO I=its,MIN(ite,ide-1)
 
-!      ttmp = 315.0 - delty*(sin(xlat(i,j)*degrad))**2.0- &
-!               delthez*alog(p_phy(i,k,j)/p0)*(cos(xlat(i,j)*degrad))**2.0
-!               
-!      teq=max(200.0,ttmp*(p_phy(i,k,j)/p0)**rcp)
-!QN : Override teq with my own temperature profile
-      pnorm = p_phy(i,k,j)/p0
-      a0 = 151.3
-      a1 = 416.7
-      a2 = -494.3
-      a3 = 254.9
-      a4 = -31.3
-      teq = a0 + a1*pnorm + a2*pnorm**2 + a3*pnorm**3 + a4*pnorm**4
+      ttmp = 315.0 - delty*(sin(xlat(i,j)*degrad))**2.0- &
+               delthez*alog(p_phy(i,k,j)/p0)*(cos(xlat(i,j)*degrad))**2.0
+               
+      teq=max(200.0,ttmp*(p_phy(i,k,j)/p0)**rcp)
 
       sig=p_phy(i,k,j)/p8w(i,1,j)
       sigterm=max(0.0,(sig-sigb)/(1.0-sigb))
@@ -81,7 +71,9 @@ CONTAINS
 
       t_tend=-kkt*(t_phy(i,k,j)-teq)/sec_p_d  ! t_tend in kinetic K/s
 
-      RTHRATEN(I,K,J)=RTHRATEN(I,K,J)+t_tend/pi_phy(i,k,j)
+      !RTHRATEN(I,K,J)=RTHRATEN(I,K,J)+t_tend/pi_phy(i,k,j)
+      !QN : fixed radiative cooling -1.5e-5 K/s (about -1.3K/day)
+      RTHRATEN(I,K,J)=-1.5e-5
 
    ENDDO i_loop
    ENDDO k_loop
