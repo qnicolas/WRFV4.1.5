@@ -74,7 +74,7 @@ CONTAINS
       !RTHRATEN(I,K,J)=RTHRATEN(I,K,J)+t_tend/pi_phy(i,k,j)
       !QN : fixed radiative cooling, with a spike at 900hPa and constant above 850hPa. Column mean is -1.5e-5 K/s (about -1.3K/day)
       IF (p_phy(i,k,j)/p0 > 0.9) THEN
-          RTHRATEN(I,K,J)= (p_phy(i,k,j)/p0 - 1.)*4e-4
+          RTHRATEN(I,K,J)= -4e-5
       ELSE IF (p_phy(i,k,j)/p0 > 0.85) THEN
           RTHRATEN(I,K,J)= (-4. - 20.*2.65*(p_phy(i,k,j)/p0-0.9))*1e-5
       ELSE
