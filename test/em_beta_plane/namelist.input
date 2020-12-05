@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 300,
+ run_days                            = 180,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -52,8 +52,9 @@
 
  &physics
  mp_physics                          = 6,
- cu_physics                          = 16,
- ra_lw_physics                       = 31,
+ no_mp_heating			     = 1,
+ cu_physics                          = 0,
+ ra_lw_physics                       = 0,
  ra_sw_physics                       = 0,
  bl_pbl_physics                      = 1,
  sf_sfclay_physics                   = 91,

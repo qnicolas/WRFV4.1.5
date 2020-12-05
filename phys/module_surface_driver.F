@@ -4004,7 +4004,12 @@ CONTAINS
         'No land surface physics option is used: sf_surface_physics = ', sf_surface_physics
         CALL wrf_message ( message )
        ENDIF
-
+       !DO j = j_start(ij) , j_end(ij)
+       !DO i=i_start(ij),i_end(ij)
+       !  IF(PRESENT(ACHFX))ACHFX(I,J)=ACHFX(I,J) + HFX(I,J)*DT
+       !  IF(PRESENT(ACLHF))ACLHF(I,J)=ACLHF(I,J) + LH(I,J)*DT
+       !ENDDO
+       !ENDDO
      END SELECT sfc_select
 
      ENDDO

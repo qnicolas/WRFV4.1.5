@@ -907,8 +907,8 @@ CONTAINS
         !QFX(I)=FLQC(I)*(QSFC(I)-QX(I))
         !QFX(I)=AMAX1(QFX(I),0.)
         !QN : Fixed evaporation
-        QFX(I) = 5.2e-5
-        FLQC(I) = QFX(I)/(QSFC(I)-QX(I))
+        QFX(I) = 0. 
+        FLQC(I) = 0.!QFX(I)/(QSFC(I)-QX(I))
         LH(I)=XLV*QFX(I)
   370 CONTINUE                                                                 
                                                                                 
@@ -916,18 +916,21 @@ CONTAINS
 !                                                                                
   390 CONTINUE                                                                 
       DO 400 I=its,ite
-        IF(XLAND(I)-1.5.GT.0.)THEN                                           
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
-!         IF ( PRESENT(ISFTCFLX) ) THEN
-!            IF ( ISFTCFLX.NE.0 ) THEN
-! AHW: add dissipative heating term (commented out in 3.6.1)
-!               HFX(I)=HFX(I)+RHOX(I)*USTM(I)*USTM(I)*WSPDI(I)
-!            ENDIF
-!         ENDIF
-        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
-          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
-          HFX(I)=AMAX1(HFX(I),-250.)                                       
-        ENDIF                                                                  
+!        IF(XLAND(I)-1.5.GT.0.)THEN                                           
+!          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
+!!         IF ( PRESENT(ISFTCFLX) ) THEN
+!!            IF ( ISFTCFLX.NE.0 ) THEN
+!! AHW: add dissipative heating term (commented out in 3.6.1)
+!!               HFX(I)=HFX(I)+RHOX(I)*USTM(I)*USTM(I)*WSPDI(I)
+!!            ENDIF
+!!         ENDIF
+!        ELSEIF(XLAND(I)-1.5.LT.0.)THEN                                       
+!          HFX(I)=FLHC(I)*(THGB(I)-THX(I))                                
+!          HFX(I)=AMAX1(HFX(I),-250.)                                       
+!        ENDIF                                                                  
+! QN : Zero surface sensible heat flux
+         HFX(I)=0.
+         FLHC(I)=0.
   400 CONTINUE                                                                 
 
   405 CONTINUE                                                                 
