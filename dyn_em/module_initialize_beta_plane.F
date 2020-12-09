@@ -1039,7 +1039,6 @@ CONTAINS
     end if
     if (rmountain<1.) then
       grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))
-      grid%sst(i,j) = grid%sst(i,j) -10*(1-rmountain) 
     else
       grid%ht(i,j) = 0.
     end if
