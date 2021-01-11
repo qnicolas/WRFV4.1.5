@@ -426,22 +426,22 @@ CONTAINS
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       
-      !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
-      !height is re-computed later when we set the grid%ht variable
-      if (abs(float(j)-jcm)<yb) then                                              ! qn : Shi&Durran 2013 type mountain
-        rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
-      else
-        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
-      end if
-      if (rmountain<1.) then
-        grid%landmask(i,j)  = 1
-        grid%xland(i,j)     = 1.
-        grid%lu_index(i,j)  = 7
-      else
+      !!QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
+      !!height is re-computed later when we set the grid%ht variable
+      !if (abs(float(j)-jcm)<yb) then                                              ! qn : Shi&Durran 2013 type mountain
+      !  rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
+      !else
+      !  rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
+      !end if
+      !if (rmountain<1.) then
+      !  grid%landmask(i,j)  = 1
+      !  grid%xland(i,j)     = 1.
+      !  grid%lu_index(i,j)  = 7
+      !else
         grid%landmask(i,j)  = 0
         grid%xland(i,j)     = 2.
         grid%lu_index(i,j)  = 16
-      endif
+      !endif
 
      END DO
    END DO
@@ -1050,7 +1050,7 @@ CONTAINS
       grid%ht(i,j) = 0.
     end if
 ! QN : END Shi&Durran 2013 type mountain
-    !grid%ht(i,j) = 0.
+    grid%ht(i,j) = 0.
     grid%phb(i,1,j) = g*grid%ht(i,j)
     grid%php(i,1,j) = 0.
     grid%ph0(i,1,j) = grid%phb(i,1,j)
