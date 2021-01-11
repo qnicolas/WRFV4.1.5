@@ -419,7 +419,10 @@ CONTAINS
       grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
       grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
 
-      grid%sst(i,j)=302.
+      !grid%sst(i,j)=300.
+      !sinusoidal SST for Mock-Walker circulation
+      grid%sst(i,j)=300. + 2.*cos(float(i-icm)/float(ide-icm)*pi)
+
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       
