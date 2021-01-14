@@ -419,7 +419,7 @@ CONTAINS
       grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
       grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
 
-      grid%sst(i,j)=300.
+      grid%sst(i,j)=302.
       grid%tsk(i,j)=grid%sst(i,j)
       grid%tmn(i,j)=grid%sst(i,j) - 0.5
       
