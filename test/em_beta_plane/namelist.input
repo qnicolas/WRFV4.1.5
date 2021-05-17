@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 80,
+ run_days                            = 20,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -17,9 +17,9 @@
  io_form_restart                     = 11
  io_form_input                       = 11
  io_form_boundary                    = 11
- history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfout_d<domain>_<date>"
- rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfrst_d<domain>_<date>"
- auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.3km.300d/wrfpout_d<domain>_<date>"
+ history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.turb.3km/wrfout_d<domain>_<date>"
+ rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.turb.3km/wrfrst_d<domain>_<date>"
+ auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.turb.3km/wrfpout_d<domain>_<date>"
  auxhist23_interval                  = 60,
  frames_per_auxhist23                = 240,
  io_form_auxhist23                   = 11,
@@ -87,8 +87,8 @@
  damp_opt                            = 1,
  zdamp                               = 10000.,
  dampcoef                            = 0.05,
- khdif                               = 0,
- kvdif                               = 0,
+ khdif                               = 300,
+ kvdif                               = 100,
  smdiv                               = 0.1,
  emdiv                               = 0.01,
  epssm                               = 0.1,
