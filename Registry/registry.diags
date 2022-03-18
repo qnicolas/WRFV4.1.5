@@ -28,10 +28,10 @@ state    real   v_pl   i{np}j   misc    1  Z   h{23}  "V_PL"    "Pressure level 
 state    real   w_pl   i{np}j   misc    1  Z   h{23}  "W_PL"    "Pressure level data, W wind"                "m s-1"
 state    real   t_pl   i{np}j   misc    1  Z   h{23}  "T_PL"    "Pressure level data, Temperature"           "K"
 state    real   rho_pl i{np}j   misc    1  Z   h{23}  "RHO_PL"  "Pressure level data, Density"               "kg m-3"
-state    real   rh_pl  i{np}j   misc    1  Z   h{23}  "RH_PL"   "Pressure level data, Relative humidity"     "%"
+state    real   rh_pl  i{np}j   misc    1  Z   -  "RH_PL"   "Pressure level data, Relative humidity"     "%"
 state    real   ght_pl i{np}j   misc    1  Z   h{23}  "GHT_PL"  "Pressure level data, Geopotential Height"   "m"
 state    real   s_pl   i{np}j   misc    1  Z   -      "S_PL"    "Pressure level data, Speed"                 "m s-1"
-state    real   td_pl  i{np}j   misc    1  Z   h{23}  "TD_PL"   "Pressure level data, Dew point temperature" "K"
+state    real   td_pl  i{np}j   misc    1  Z   -  "TD_PL"   "Pressure level data, Dew point temperature" "K"
 state    real   q_pl   i{np}j   misc    1  Z   h{23}  "Q_PL"    "Pressure level data, Mixing ratio"          "kg/kg"
 
 #  Package declarations

@@ -1,5 +1,5 @@
  &time_control
- run_days                            = 100,
+ run_days                            = 50,
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
@@ -12,14 +12,14 @@
  history_interval                    = 360,
  frames_per_outfile                  = 40,
  restart                             = .false.,
- restart_interval                    = 14400,
+ restart_interval                    = 7200,
  io_form_history                     = 11
  io_form_restart                     = 11
  io_form_input                       = 11
  io_form_boundary                    = 11
- history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.500m.3km/wrfout_d<domain>_<date>"
- rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.500m.3km/wrfrst_d<domain>_<date>"
- auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.500m.3km/wrfpout_d<domain>_<date>"
+ history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfout_d<domain>_<date>"
+ rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfrst_d<domain>_<date>"
+ auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfpout_d<domain>_<date>"
  auxhist23_interval                  = 60,
  frames_per_auxhist23                = 240,
  io_form_auxhist23                   = 11,
@@ -31,7 +31,7 @@
  nproc_x			     = 218
  nproc_y			     = 3
  use_adaptive_time_step              = .false.,
- time_step                           = 18,
+ time_step                           = 16,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
  max_dom                             = 1,
@@ -40,10 +40,10 @@
  s_sn                                = 1,
  e_sn                                = 67,
  s_vert                              = 1,
- e_vert                              = 39,
+ e_vert                              = 61,
  dx                                  = 3000,
  dy                                  = 3000,
- ztop                                = 16000,
+ ztop                                = 30000,
  grid_id                             = 1,
  parent_id                           = 0,
  i_parent_start                      = 0,
@@ -87,8 +87,8 @@
  damp_opt                            = 1,
  zdamp                               = 10000.,
  dampcoef                            = 0.05,
- khdif                               = 0,
- kvdif                               = 0,
+ khdif                               = 300,
+ kvdif                               = 100,
  smdiv                               = 0.1,
  emdiv                               = 0.01,
  epssm                               = 0.1,
@@ -128,6 +128,6 @@
 
  &diags
  p_lev_diags = 1,
- num_press_levels = 25,
- press_levels = 97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500
+ num_press_levels = 29,
+ press_levels = 99000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7500,5000
  /
