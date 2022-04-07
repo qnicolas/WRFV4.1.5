@@ -41,3 +41,6 @@ run/namelist.input
 
 # namelist backups - don't want to include those all the time
 run/namelist.input.backup*
+
+# Files that are too heavy
+test/em_beta_plane/*.dat

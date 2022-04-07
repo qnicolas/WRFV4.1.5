@@ -137,10 +137,6 @@ CONTAINS
 
    LOGICAL, EXTERNAL :: wrf_dm_on_monitor
 
-   ! wrb:
-   INTEGER :: nyy, ig, jg
-   REAL    :: jcent, dphi, ns_extent, tmp, ya,yb, rmountain !qn: added three last variables for mountain height computation
-   
 
    SELECT CASE ( model_data_order )
          CASE ( DATA_ORDER_ZXY )
@@ -185,118 +181,15 @@ CONTAINS
    CALL model_to_grid_config_rec ( grid%id , model_config_rec , config_flags )
 
   ideal_constants: SELECT CASE ( model_config_rec%ideal_case )
-  CASE ( hill2d_x )
-   hm = 100.
-   xa = 5.0
+  CASE ( beta_plane )
+   hm = 500.
+   xa = 100000./config_flags%dx !qn
 
-   icm = ide/2
-
-
-   xa1  = 5000./500.
-   xal1 = 4000./500.
-   pii  = 2.*asin(1.0)
-   hm1  = 250.
-!   hm1  = 1000.
-
-
-   stretch_grid = .true.
-   delt = 0.
-!   z_scale = .40
-   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/2
-   nyc = (jde-jds)/2
-
-  CASE ( quarter_ss, squall2d_x, squall2d_y )
-
-   stretch_grid = .true.
-   delt = 3.
-!   z_scale = .40
-   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/2
-   nyc = (jde-jds)/2
-
-  CASE (grav2d_x)
-
-   stretch_grid = .true.
-!    z_scale = 1.675
-   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/2
-   nyc = (jde-jds)/2
-
-  CASE (convrad)
-   stretch_grid = .true.
-   delt = 1.
-!   z_scale = .32
-   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/2
-   nyc = jde/2
-   icm = ide/2
-! lm is the half width of the land in terms of grid points
-   lm = 25
-   write(6,*) 'lm,icm-lm,icm+lm = ', lm,icm-lm,icm+lm
-
-  CASE (beta_plane)
-
-! wrb:  add small narrow mountain:
-   hm = 1000.
-   !hm = 0.
-   xa = 100000./config_flags%dx !qn: for Shi&Durran type mountain
-   ya = 100000./config_flags%dy !qn: for Shi&Durran type mountain
-   yb = 500000./config_flags%dy  !qn: for Shi&Durran type mountain
-   rmountain = 0. !qn: for Shi&Durran type mountain; modified later in the code
-   icm = (ide+ids)/2    ! not REAL(..), because I want the top of the mountain to sit on one grid cell, and not in between two cells
-   jcm = REAL(jde+jds-1)/2.
-   !z_scale = 8000./config_flags%ztop
-
-! Note: htbub, radbub, radz, tpbub set above as parameters
-
-   piov2 = 2.*atan(1.0)
-   icen = ide/4
-   jcen = jde/2  ! wrb: only used for eq beta plane
+   icm = (ide+ids)/2
 
    stretch_grid = .false.
-   delt = 0.
-   z_scale = .50   ! wrb
-!   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/4
-   nyc = (jde-jds)/2
-
-   nyy = jde-jds            ! Number of grid cells in latitude
-   jcent = REAL(jde+jds-1)/2. ! Center grid cell (or between two grid cells if the number of cells is even) // qn : modified from wrb
-   ns_extent = REAL(nyy)*config_flags%dy/100000. !QN : full extent, from south of domain to north of domain
-   dphi = ns_extent/REAL(nyy)
-
-  CASE (seabreeze2d_x)
-
-   stretch_grid = .true.
-   delt = 6.
 !   z_scale = .40
-   z_scale = 8000./config_flags%ztop
-   pi = 2.*asin(1.0)
-   write(6,*) ' pi is ',pi
-   nxc = (ide-ids)/2
-   nyc = jde/2
-   icm = ide/2
-! lm is the half width of the land in terms of grid points
-   lm = 25
-   write(6,*) 'lm,icm-lm,icm+lm = ', lm,icm-lm,icm+lm
-
-  CASE (les)
-  !  FOR LES, set stretch to false
-   stretch_grid = .false.
-   delt = 3.
-!   z_scale = .40
-   z_scale = 8000./config_flags%ztop  ! not used if stretch_grid = .false.
+   z_scale = 8000./config_flags%ztop !QN: note different from moist simulations where I had z_scale=.5
    pi = 2.*asin(1.0)
    write(6,*) ' pi is ',pi
    nxc = (ide-ids)/2
@@ -328,7 +221,7 @@ CONTAINS
 
   ideal_landmap: SELECT CASE ( model_config_rec%ideal_case )
 
-   CASE(hill2d_x, quarter_ss, squall2d_x, squall2d_y, grav2d_x)
+   CASE(hill2d_x, quarter_ss, squall2d_x, squall2d_y, grav2d_x,beta_plane)
 
     CALL nl_set_mminlu(1,'    ')
     CALL nl_set_iswater(1,0)
@@ -363,387 +256,6 @@ CONTAINS
       END DO
    END DO
 
-   CASE(beta_plane)
-    mminlu2 = ' '
-    mminlu2(1:4) = 'USGS'
-    CALL nl_set_mminlu(1, mminlu2)
-!    CALL nl_set_mminlu(1,'    ')
-    !CALL nl_set_iswater(1,0)
-    CALL nl_set_iswater(1,16)  ! wrb: need to change
-    CALL nl_set_cen_lat(1,0.)
-    CALL nl_set_cen_lon(1,180.)
-    CALL nl_set_truelat1(1,0.)
-    CALL nl_set_truelat2(1,0.)
-    CALL nl_set_moad_cen_lat (1,0.)
-    CALL nl_set_stand_lon (1,0.)
-    CALL nl_set_pole_lon (1,0.)
-    CALL nl_set_pole_lat (1,90.)
-    CALL nl_set_map_proj(1,0)
-
-
-!  here we initialize data that currently is not initialized
-!  in the input data
-
-    DO j = jts, jte
-      DO i = its, ite
-         grid%msft(i,j)    = 1.  ! wrb
-         grid%msfu(i,j)    = 1.  ! wrb
-         grid%msfv(i,j)    = 1.  ! wrb
-         grid%msftx(i,j)    = 1.
-         grid%msfty(i,j)    = 1.
-         grid%msfux(i,j)    = 1.
-         grid%msfuy(i,j)    = 1.
-         grid%msfvx(i,j)    = 1.
-         grid%msfvx_inv(i,j)= 1.
-         grid%msfvy(i,j)    = 1.
-         grid%sina(i,j)     = 0.
-         grid%cosa(i,j)     = 1.
- !        grid%e(i,j)        = 0.
- !        grid%f(i,j)        = 1.e-04
-      END DO
-   END DO
-
-   DO j = jts, jte
-     DO i = its, ite
-      ! jg is the J index in the global (domain) span of the array.
-      jg = j - jds + 1  ! jds is not necessarily 1
-      ig = i - ids + 1  ! ids is not necessarily 1
-
-      grid%xlong(i,j)  = REAL(ig-1)*config_flags%dx/100000.
-      grid%xlat(i,j)  = (REAL(jg)-jcent)*dphi  ! wrb: equatorial beta plane
-      ! grid%xlat(i,j)  = REAL(jg)*dphi  ! wrb: top half of equatorial beta plane
-      !vlat       = grid%xlat(i,j) - 0.5*dphi
-      !grid%e(i,j)     = 2*EOMEG*COS(grid%xlat(i,j)*degrad)
-      !grid%f(i,j)     = 2*EOMEG*SIN(grid%xlat(i,j)*degrad)
-      ! beta plane:
-      grid%e(i,j)     = 2*EOMEG !QN: Has to be set constant to conserve vorticity (cf Grimshaw 1975)
-      grid%f(i,j)     = 2*EOMEG*grid%xlat(i,j)*degrad
-
-      !grid%sst(i,j)=300.
-      ! use QOBS distribution of Neale and Hoskins Aquaplanet Experiment 
-      if (abs(grid%xlat(i,j)) > 60.) then
-        grid%sst(i,j) = 273.15
-      else
-        tmp = sin(3./2.*grid%xlat(i,j)*pi/180.)
-        tmp = (2. - tmp*tmp*tmp*tmp - tmp*tmp)*0.5
-        grid%sst(i,j) = 273.15 + tmp*(27. - 0.) + 0. 
-      end if
-      !QN: increase SSTs by 2K uniformly to simulate 2*CO2
-      !grid%sst(i,j) = grid%sst(i,j) +2.
-      grid%tsk(i,j)=grid%sst(i,j)
-      grid%tmn(i,j)=grid%sst(i,j) - 0.5
-      
-      !QN : add land over the mountain. I have to compute the mountain height here to know exactly where to put land; the mountain
-      !height is re-computed later when we set the grid%ht variable
-      if (abs(float(j)-jcm)<yb) then                                              ! qn : Shi&Durran 2013 type mountain
-        rmountain = sqrt((float(i-icm)/xa)**2)                                    ! qn : Shi&Durran 2013 type mountain
-      else
-        rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 ) ! qn : Shi&Durran 2013 type mountain
-      end if
-      if (rmountain<1.) then
-        grid%landmask(i,j)  = 1
-        grid%xland(i,j)     = 1.
-        grid%lu_index(i,j)  = 7
-      else
-        grid%landmask(i,j)  = 0
-        grid%xland(i,j)     = 2.
-        grid%lu_index(i,j)  = 16
-      endif
-
-     END DO
-   END DO
-
-   DO j = jts, jte
-     DO k = kts, kte
-       DO i = its, ite
-         grid%ww(i,k,j)     = 0.
-       END DO
-     END DO
-   END DO
-!  wrb: end beta plane CASE !QN : just need to add a bit of land processing
-   DO j = jts , MIN(jde-1,jte)
-      DO i = its , MIN(ide-1,ite)
-         IF (grid%xland(i,j) .lt. 1.5) THEN
-            grid%vegfra(i,j) = 50.
-            grid%canwat(i,j) = 0.
-            grid%ivgtyp(i,j) = 18
-            grid%isltyp(i,j) = 7
-            grid%xice(i,j) = 0.
-            grid%snow(i,j) = 0.
-         ELSE
-            grid%vegfra(i,j) = 0.
-            grid%canwat(i,j) = 0.
-            grid%ivgtyp(i,j) = 16
-            grid%isltyp(i,j) = 14
-            grid%xice(i,j) = 0.
-            grid%snow(i,j) = 0.
-         ENDIF
-      END DO
-   END DO
- ! for Noah LSM, additional variables need to be initialized
-
-   beta_plane_masked_fields : SELECT CASE ( model_config_rec%sf_surface_physics(grid%id) )
-
-      CASE (SLABSCHEME)
-
-      CASE (LSMSCHEME)
-
-        DO j = jts , MIN(jde-1,jte)
-           DO i = its , MIN(ide-1,ite)
-              IF (grid%xland(i,j) .lt. 1.5) THEN
-                 grid%vegfra(i,j) = 50.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 18
-                 grid%isltyp(i,j) = 7
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ELSE
-                 grid%vegfra(i,j) = 0.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 16
-                 grid%isltyp(i,j) = 14
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ENDIF
-           END DO
-        END DO
-
-      CASE (RUCLSMSCHEME)
-
-   END SELECT beta_plane_masked_fields
-      CALL process_soil_ideal(grid%xland,grid%xice,grid%vegfra,grid%snow,grid%canwat, &
-                     grid%ivgtyp,grid%isltyp,grid%tslb,grid%smois, &
-                     grid%tsk,grid%tmn,grid%zs,grid%dzs,model_config_rec%num_soil_layers, &
-                     model_config_rec%sf_surface_physics(grid%id), &
-                                   ids,ide, jds,jde, kds,kde,&
-                                   ims,ime, jms,jme, kms,kme,&
-                                   its,ite, jts,jte, kts,kte )
-   !QN : end beta_plane case now
-
-   CASE(convrad)
-    mminlu2 = ' '
-    mminlu2(1:4) = 'USGS'
-    CALL nl_set_mminlu(1, mminlu2)
-!   CALL nl_set_mminlu(1, 'USGS')
-    CALL nl_set_iswater(1,16)
-    CALL nl_set_isice(1,3)
-    CALL nl_set_cen_lat(1,20.)
-    CALL nl_set_cen_lon(1,-105.)
-    CALL nl_set_truelat1(1,0.)
-    CALL nl_set_truelat2(1,0.)
-    CALL nl_set_moad_cen_lat (1,0.)
-    CALL nl_set_stand_lon (1,0.)
-    CALL nl_set_pole_lon (1,0.)
-    CALL nl_set_pole_lat (1,90.)
-    CALL nl_set_map_proj(1,0)
-!   CALL model_to_grid_config_rec(1,model_config_rec,config_flags)
-    CALL nl_get_iswater(1,grid%iswater)
-
-!  here we initialize data that currently is not initialized
-!  in the input data
-
-    DO j = jts, jte
-      DO i = its, ite
-         grid%msft(i,j)     = 1.
-         grid%msfu(i,j)     = 1.
-         grid%msfv(i,j)     = 1.
-         grid%msftx(i,j)    = 1.
-         grid%msfty(i,j)    = 1.
-         grid%msfux(i,j)    = 1.
-         grid%msfuy(i,j)    = 1.
-         grid%msfvx(i,j)    = 1.
-         grid%msfvy(i,j)    = 1.
-         grid%msfvx_inv(i,j)= 1.
-         grid%sina(i,j)     = 0.
-         grid%cosa(i,j)     = 1.
-         grid%e(i,j)        = 0.
-         grid%xlat(i,j)     = 10.
-         grid%f(i,j)        = 2.5e-5
-         grid%xlong(i,j)     = 0.
-! Hard-wire the ocean-land configuration
-! all ocean
-!       if (i .ge. (icm-lm) .and. i .lt. (icm+lm)) then
-!        grid%xland(i,j)     = 1.
-!        grid%lu_index(i,j)  = 18
-!else
-         grid%xland(i,j)     = 2.
-         grid%lu_index(i,j)  = 16
-!end if
-      END DO
-   END DO
-
-! for Noah LSM, additional variables need to be initialized
-
-   convrad_masked_fields : SELECT CASE ( model_config_rec%sf_surface_physics(grid%id) )
-
-      CASE (SLABSCHEME)
-
-      CASE (LSMSCHEME)
-
-        DO j = jts , MIN(jde-1,jte)
-           DO i = its , MIN(ide-1,ite)
-              IF (grid%xland(i,j) .lt. 1.5) THEN
-                 grid%vegfra(i,j) = 50.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 18
-                 grid%isltyp(i,j) = 8
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ELSE
-                 grid%vegfra(i,j) = 0.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 16
-                 grid%isltyp(i,j) = 14
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ENDIF
-           END DO
-        END DO
-
-      CASE (RUCLSMSCHEME)
-
-   END SELECT convrad_masked_fields
-! Process the soil; note that there are some things hard-wired into share/module_soil_pre.F
-      CALL process_soil_ideal(grid%xland,grid%xice,grid%vegfra,grid%snow,grid%canwat, &
-                     grid%ivgtyp,grid%isltyp,grid%tslb,grid%smois, &
-                     grid%tsk,grid%tmn,grid%zs,grid%dzs,model_config_rec%num_soil_layers, &
-                     model_config_rec%sf_surface_physics(grid%id), &
-                                   ids,ide, jds,jde, kds,kde,&
-                                   ims,ime, jms,jme, kms,kme,&
-                                   its,ite, jts,jte, kts,kte )
-   CASE(seabreeze2d_x)
-
-    mminlu2 = ' '
-    mminlu2(1:4) = 'USGS'
-    CALL nl_set_mminlu(1, mminlu2)
-!   CALL nl_set_mminlu(1, 'USGS')
-    CALL nl_set_iswater(1,16)
-    CALL nl_set_isice(1,3)
-    CALL nl_set_cen_lat(1,20.)
-    CALL nl_set_cen_lon(1,-105.)
-    CALL nl_set_truelat1(1,0.)
-    CALL nl_set_truelat2(1,0.)
-    CALL nl_set_moad_cen_lat (1,0.)
-    CALL nl_set_stand_lon (1,0.)
-    CALL nl_set_pole_lon (1,0.)
-    CALL nl_set_pole_lat (1,90.)
-    CALL nl_set_map_proj(1,0)
-!   CALL model_to_grid_config_rec(1,model_config_rec,config_flags)
-    CALL nl_get_iswater(1,grid%iswater)
-
-!  here we initialize data that currently is not initialized
-!  in the input data
-
-    DO j = jts, jte
-      DO i = its, ite
-         grid%msft(i,j)     = 1.
-         grid%msfu(i,j)     = 1.
-         grid%msfv(i,j)     = 1.
-         grid%msftx(i,j)    = 1.
-         grid%msfty(i,j)    = 1.
-         grid%msfux(i,j)    = 1.
-         grid%msfuy(i,j)    = 1.
-         grid%msfvx(i,j)    = 1.
-         grid%msfvy(i,j)    = 1.
-         grid%msfvx_inv(i,j)= 1.
-         grid%sina(i,j)     = 0.
-         grid%cosa(i,j)     = 1.
-         grid%e(i,j)        = 0.
-         grid%f(i,j)        = 0.
-         grid%xlat(i,j)     = 30.
-         grid%xlong(i,j)     = 0.
-! Hard-wire the ocean-land configuration
-        if (i .ge. (icm-lm) .and. i .lt. (icm+lm)) then
-         grid%xland(i,j)     = 1.
-         grid%lu_index(i,j)  = 18
-         grid%tsk(i,j) = 280.0
-         grid%tmn(i,j) = 280.0
-        else
-         grid%xland(i,j)     = 2.
-         grid%lu_index(i,j)  = 16
-         grid%tsk(i,j) = 287.0
-         grid%tmn(i,j) = 280.0
-        end if
-      END DO
-   END DO
-
-! for Noah LSM, additional variables need to be initialized
-
-   seabreeze_masked_fields : SELECT CASE ( model_config_rec%sf_surface_physics(grid%id) )
-
-      CASE (SLABSCHEME)
-
-      CASE (LSMSCHEME)
-
-        DO j = jts , MIN(jde-1,jte)
-           DO i = its , MIN(ide-1,ite)
-              IF (grid%xland(i,j) .lt. 1.5) THEN
-                 grid%vegfra(i,j) = 50.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 18
-                 grid%isltyp(i,j) = 8
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ELSE
-                 grid%vegfra(i,j) = 0.
-                 grid%canwat(i,j) = 0.
-                 grid%ivgtyp(i,j) = 16
-                 grid%isltyp(i,j) = 14
-                 grid%xice(i,j) = 0.
-                 grid%snow(i,j) = 0.
-              ENDIF
-           END DO
-        END DO
-
-      CASE (RUCLSMSCHEME)
-
-   END SELECT seabreeze_masked_fields
-
-! Process the soil; note that there are some things hard-wired into share/module_soil_pre.F
-      CALL process_soil_ideal(grid%xland,grid%xice,grid%vegfra,grid%snow,grid%canwat, &
-                     grid%ivgtyp,grid%isltyp,grid%tslb,grid%smois, &
-                     grid%tsk,grid%tmn,grid%zs,grid%dzs,model_config_rec%num_soil_layers, &
-                     model_config_rec%sf_surface_physics(grid%id), &
-                                   ids,ide, jds,jde, kds,kde,&
-                                   ims,ime, jms,jme, kms,kme,&
-                                   its,ite, jts,jte, kts,kte )
-
-   CASE (les)
-
-    CALL nl_set_mminlu(1, '    ')
-    CALL nl_set_iswater(1,0)
-    CALL nl_set_cen_lat(1,40.)
-    CALL nl_set_cen_lon(1,-105.)
-    CALL nl_set_truelat1(1,0.)
-    CALL nl_set_truelat2(1,0.)
-    CALL nl_set_moad_cen_lat (1,0.)
-    CALL nl_set_stand_lon (1,0.)
-    CALL nl_set_pole_lon (1,0.)
-    CALL nl_set_pole_lat (1,90.)
-    CALL nl_set_map_proj(1,0)
-
-
-!  here we initialize data that currently is not initialized
-!  in the input data
-
-    DO j = jts, jte
-      DO i = its, ite
-         grid%msftx(i,j)    = 1.
-         grid%msfty(i,j)    = 1.
-         grid%msfux(i,j)    = 1.
-         grid%msfuy(i,j)    = 1.
-         grid%msfvx(i,j)    = 1.
-         grid%msfvx_inv(i,j)= 1.
-         grid%msfvy(i,j)    = 1.
-         grid%sina(i,j)     = 0.
-         grid%cosa(i,j)     = 1.
-         grid%e(i,j)        = 0.
-!  for LES, include Coriolis force
-         grid%f(i,j)        = 1.e-4
-
-      END DO
-   END DO
-
    END SELECT ideal_landmap
 
     DO j = jts, jte
@@ -772,71 +284,6 @@ CONTAINS
       grid%znw(k) = 1. - float(k-1)/float(kde-1)
      ENDDO
    ENDIF
-   CASE(convrad, seabreeze2d_x)
-   IF (stretch_grid) THEN ! read eta_levels
-     DO k=1, kde
-      grid%znw(k) = model_config_rec%eta_levels(k)
-     ENDDO
-   ELSE
-     DO k=1, kde
-      grid%znw(k) = 1. - float(k-1)/float(kde-1)
-     ENDDO
-   ENDIF
-   CASE(les)
-       IF (model_config_rec%eta_levels(1) .EQ. -1) THEN !we do not have eta_levels from namelist
-   IF (stretch_grid) THEN ! exponential stretch for eta (nearly constant dz)
-     DO k=1, kde
-      grid%znw(k) = (exp(-(k-1)/float(kde-1)/z_scale) - exp(-1./z_scale))/ &
-                                (1.-exp(-1./z_scale))
-     ENDDO
-   ELSE
-     DO k=1, kde
-      grid%znw(k) = 1. - float(k-1)/float(kde-1)
-     ENDDO
-   ENDIF
-      ELSE
-          CALL wrf_debug(0,"module_initialize_les: vertical nesting is enabled, using eta_levels specified in namelist.input")
-          ks = 0
-          DO id=1,grid%id
-             ks = ks+model_config_rec%e_vert(id)
-          ENDDO
-          IF (ks .GT. max_eta) THEN
-             CALL wrf_error_fatal("too many vertical levels, increase max_eta in frame/module_driver_constants.F")
-          ENDIF
-          !Now set the eta_levels to what we specified in the namelist. We've
-          !packed all the domains' eta_levels into a 'vector' and now we need
-          !to pull only the section of the vector associated with our domain
-          !of interest, which is between indicies ks and ke.
-          IF (grid%id .EQ. 1) THEN
-            ks = 1
-            ke = model_config_rec%e_vert(1)
-          ELSE
-            id = 1
-            ks = 1
-            ke = 0
-            DO WHILE (grid%id .GT. id)
-              id = id+1
-              ks = ks+model_config_rec%e_vert(id-1)
-              ke = ks+model_config_rec%e_vert(id)
-            ENDDO
-          ENDIF
-          DO k=1,kde
-            grid%znw(k) = model_config_rec%eta_levels(ks+k-1)
-          ENDDO
-          !Check the value of the first and last eta level for our domain,
-          !then check that the vector of eta levels is only decreasing
-          IF (grid%znw(1) .NE. 1.0) THEN
-            CALL wrf_error_fatal("error with specified eta_levels, first level is not 1.0")
-          ENDIF
-          IF (grid%znw(kde) .NE. 0.0) THEN
-            CALL wrf_error_fatal("error with specified eta_levels, last level is not 0.0")
-          ENDIF
-          DO k=2,kde
-            IF (grid%znw(k) .GT. grid%znw(k-1)) THEN
-              CALL wrf_error_fatal("eta_levels are not uniformly decreasing from 1.0 to 0.0")
-            ENDIF
-          ENDDO
-      ENDIF
    END SELECT ideal_levels
 
    DO k=1, kde-1
@@ -867,33 +314,6 @@ CONTAINS
    ideal_sounding: SELECT CASE ( model_config_rec%ideal_case )
 
    CASE (beta_plane)
-
-!  write(6,*) ' reading input jet sounding '
-!  call read_input_jet( u_jet, rho_jet, th_jet, z_jet, nz_jet, ny_jet )
-
-   write(6,*) ' getting dry sounding for base state '
-!  write(6,*) ' using middle column in jet sounding, j = ',ny_jet/2
-
-   dry_sounding   = .true.
-!   debug = .true.  !  this will produce print of the sounding (last argument)
-! wrb:  maybe need to change to generic get_sounding()
-!  CALL get_sounding_b_wave( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-!                      nl_max, nl_in, u_jet, rho_jet, th_jet, z_jet,      &
-!                      nz_jet, ny_jet, ny_jet/2, .true.                   )
-   CALL get_sounding( zk, p_in, pd_in, theta, rho, u, v, qv, dry_sounding, &
-                     nl_max, nl_in, theta_surf)
-
-   write(6,*) ' returned from reading sounding, nl_in is ',nl_in
-
-!  find ptop for the desired ztop (ztop is input from the namelist),
-!  and find surface pressure
-
-!  For the jet, using the middle column for the base state means that
-!  we will be extrapolating above the highest height data to the south
-!  of the centerline.
-
-
-   CASE DEFAULT
 
   IF ( wrf_dm_on_monitor() ) THEN
   write(6,*) ' getting dry sounding for base state '
@@ -1024,7 +444,7 @@ CONTAINS
 #endif
 
   ideal_terrain: SELECT CASE ( model_config_rec%ideal_case )
-  CASE (hill2d_x)
+  CASE (beta_plane)
   DO j=jts,jte
   DO i=its,ite 
     grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
@@ -1033,79 +453,6 @@ CONTAINS
     grid%phb(i,1,j) = g*grid%ht(i,j)
     grid%php(i,1,j) = 0.
     grid%ph0(i,1,j) = grid%phb(i,1,j)
-  ENDDO
-  ENDDO
-
-  CASE (quarter_ss, convrad, squall2d_x, squall2d_y, grav2d_x, beta_plane, seabreeze2d_x)
-  DO j=jts,jte
-  DO i=its,ite 
-    !!if (abs(float(j - jcm)) < 20.) then
-    !if (abs(grid%xlat(i,j)) < 5.) then   ! wrb: do half an eq beta plane
-    !  grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
-    !else
-    !  grid%ht(i,j) = 0.
-    !end if 
-! QN : add a Shi&Durran 2013 type mountain
-    if (abs(float(j)-jcm)<yb) then
-      rmountain = sqrt((float(i-icm)/xa)**2)
-    else
-      rmountain = sqrt((float(i-icm)/xa)**2 + ((abs(float(j)-jcm)-yb)/ya)**2 )
-    end if
-    if (rmountain<1.) then
-      grid%ht(i,j) = (hm/2)*(1.+cos(pi * rmountain))
-    else
-      grid%ht(i,j) = 0.
-    end if
-! QN : END Shi&Durran 2013 type mountain
-    !grid%ht(i,j) = 0.
-    grid%phb(i,1,j) = g*grid%ht(i,j)
-    grid%php(i,1,j) = 0.
-    grid%ph0(i,1,j) = grid%phb(i,1,j)
-  ENDDO
-  ENDDO
-
-  CASE (les)
-  DO j=jts,jte
-  DO i=its,ite
-    grid%ht(i,j) = 0.
-  ENDDO
-  ENDDO
-
-  xs=ide/2 -3
-  xs=ids   -3
-  xe=xs + 6
-  ys=jde/2 -3
-  ye=ys + 6
-  mtn_ht = 500
-#ifdef MTN
-  DO j=max(ys,jds),min(ye,jde-1)
-  DO i=max(xs,ids),min(xe,ide-1)
-     grid%ht(i,j) = mtn_ht * 0.25 * &
-               ( 1. + COS ( 2*pi/(xe-xs) * ( i-xs ) + pi ) ) * &
-               ( 1. + COS ( 2*pi/(ye-ys) * ( j-ys ) + pi ) )
-  ENDDO
-  ENDDO
-#endif
-#ifdef EW_RIDGE
-  DO j=max(ys,jds),min(ye,jde-1)
-  DO i=ids,ide
-     grid%ht(i,j) = mtn_ht * 0.50 * &
-               ( 1. + COS ( 2*pi/(ye-ys) * ( j-ys ) + pi ) )
-  ENDDO
-  ENDDO
-#endif
-#ifdef NS_RIDGE
-  DO j=jds,jde
-  DO i=max(xs,ids),min(xe,ide-1)
-     grid%ht(i,j) = mtn_ht * 0.50 * &
-               ( 1. + COS ( 2*pi/(xe-xs) * ( i-xs ) + pi ) )
-  ENDDO
-  ENDDO
-#endif
-  DO j=jts,jte
-  DO i=its,ite
-    grid%phb(i,1,j) = g * grid%ht(i,j)
-    grid%ph0(i,1,j) = g * grid%ht(i,j)
   ENDDO
   ENDDO
 
@@ -1239,346 +586,55 @@ CONTAINS
   ENDDO
   ENDDO
 
-!===============
-  ideal_pert: SELECT CASE ( model_config_rec%ideal_case )
-  CASE (quarter_ss)
-!  QSS thermal perturbation to kick off convection
-
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',delt
-
-  DO J = jts, min(jde-1,jte)
-    yrad = config_flags%dy*float(j-nyc)/10000.
-!   yrad = 0.
-    DO I = its, min(ide-1,ite)
-      xrad = config_flags%dx*float(i-nxc)/10000.
-!     xrad = 0.
-      DO K = 1, kte-1
-
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-        zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-                   +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-        zrad = (zrad-1500.)/1500.
-        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-  CASE (squall2d_x)
-!  QSS thermal perturbation to kick off convection
-
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',delt
-
-  DO J = jts, min(jde-1,jte)
-!   yrad = config_flags%dy*float(j-nyc)/4000.
-    yrad = 0.
-    DO I = its, min(ide-1,ite)
-      xrad = config_flags%dx*float(i-nxc)/4000.
-!     xrad = 0.
-      DO K = 1, kte-1
-
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-        zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-                   +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-        zrad = (zrad-1500.)/1500.
-        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-  CASE (squall2d_y)
-!  QSS thermal perturbation to kick off convection
-
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',delt
-
-  DO J = jts, min(jde-1,jte)
-    yrad = config_flags%dy*float(j-nyc)/4000.
-!   yrad = 0.
-    DO I = its, min(ide-1,ite)
-!     xrad = config_flags%dx*float(i-nxc)/4000.
-      xrad = 0.
-      DO K = 1, kte-1
-
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-        zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-                   +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-        zrad = (zrad-1500.)/1500.
-        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-  CASE (convrad)
-!  random low-level thermal perturbation to kick off convection
-        call random_seed
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',delt
-
-  DO J = jts, min(jde-1,jte)
-    DO I = its, min(ide-1,ite)
-      DO K = 1, 10
-
-        call RANDOM_NUMBER(rnd)
-          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*(rnd-0.5)
-         !  grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-  CASE (grav2d_x)
-!  cold bubble input  (from straka et al, IJNMF, vol 17, 1993 pp 1-22)
-
-  t_min = grid%t_1(its,kts,jts)
-  t_max = t_min
-  u_mean = 00.
-
-  xpos = config_flags%dx*nxc - u_mean*900.
-  xposml = xpos - config_flags%dx*(ide-1)
-  xpospl = xpos + config_flags%dx*(ide-1)
-
-  DO J = jts, min(jde-1,jte)
-    DO I = its, min(ide-1,ite)
-!      xrad = config_flags%dx*float(i-nxc)/4000.  !  4000 meter horizontal radius
-!                                    !  centered in the domain
-
-       xrad = min( abs(config_flags%dx*float(i)-xpos),   &
-                   abs(config_flags%dx*float(i)-xposml), &
-                   abs(config_flags%dx*float(i)-xpospl))/4000.
-
-      DO K = 1, kte-1
-
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-        zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-                   +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-        zrad = (zrad-3000.)/2000. !  2000 meter vertical radius,
-                                  !  centered at z=3000,
-        RAD=SQRT(xrad*xrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-
-           !  perturbation temperature is 15 C, convert to potential temperature
-
-           delt = -15.0 / ((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**rcp
-
-           grid%T_1(i,k,j)=grid%T_1(i,k,j)+delt*(COS(PI*RAD)+1.0)/2.
-           grid%T_2(i,k,j)=grid%T_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-
-        t_min = min(t_min, grid%t_1(i,k,j))
-        t_max = max(t_max, grid%t_1(i,k,j))
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-
-  write(6,*) ' min and max theta perturbation ',t_min,t_max
-
-! -- end bubble insert
-  CASE (beta_plane)
-!  thermal perturbation to kick off convection
-
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',tpbub
-
-  DO J = jts, min(jde-1,jte)
-    yrad = config_flags%dy*float(j-jde/2-1)/radbub
-    DO I = its, min(ide-1,ite)
-      xrad = float(i-1)/float(ide-ids)
-
-      DO K = 1, kte-1
-
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-        zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-                   +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-        zrad = (zrad-htbub)/radz
-        RAD=SQRT(yrad*yrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-           tp = tpbub*cos(rad*piov2)*cos(rad*piov2)*cos(xrad*2*pi+pi)
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+tp
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*grid%moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-      ENDDO
-
-!  rebalance hydrostatically
-
-      DO k  = 2,kte
-        grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
-
-        grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
-        grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-
-  CASE (les)
-!  thermal perturbation to kick off convection
-
-  write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
-  write(6,*) ' delt for perturbation ',delt
-
-! For LES, change the initial random perturbations
-! For 2D test, call randx outside I-loop
-! For 3D runs, call randx inside both I-J loops
-
-  DO J = jts, min(jde-1,jte)
-!   yrad = config_flags%dy*float(j-nyc)/10000.
-    yrad = 0.
-    DO I = its, min(ide-1,ite)
-!     xrad = config_flags%dx*float(i-nxc)/10000.
-      xrad = 0.
-      call random_number (randx)
-      randx = randx - 0.5
-!     DO K = 1, kte-1
-      DO K = 1, 4
-
-!  No bubbles for LES!
-!  put in preturbation theta (bubble) and recalc density.  note,
-!  the mass in the column is not changing, so when theta changes,
-!  we recompute density and geopotential
-
-!       zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
-!                  +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
-!       zrad = (zrad-1500.)/1500.
-        zrad = 0.
-        RAD=SQRT(xrad*xrad+yrad*yrad+zrad*zrad)
-        IF(RAD <= 1.) THEN
-!          grid%t_1(i,k,j)=grid%t_1(i,k,j)+delt*COS(.5*PI*RAD)**2
-           grid%t_1(i,k,j)=grid%t_1(i,k,j)+ 0.1 *randx
-           grid%t_2(i,k,j)=grid%t_1(i,k,j)
-           qvf = 1. + rvovrd*moist(i,k,j,P_QV)
-           grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
-                        (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
-           grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
-        ENDIF
-      ENDDO
-
-!  rebalance hydrostatically
-
-
-      DO  kk  = 2,kte
-        k = kk - 1
-        grid%ph_1(i,kk,j) = grid%ph_1(i,kk-1,j) - (grid%dnw(kk-1))*(       &
-                     ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,kk-1,j)+ &
-                      (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,kk-1,j)  )
-
-        grid%ph_2(i,kk,j) = grid%ph_1(i,kk,j)
-        grid%ph0(i,kk,j) = grid%ph_1(i,kk,j) + grid%phb(i,kk,j)
-      ENDDO
-
-    ENDDO
-  ENDDO
-
-  END SELECT ideal_pert
+! !===============
+!   ideal_pert: SELECT CASE ( model_config_rec%ideal_case )
+!   CASE (beta_plane)
+! !  thermal perturbation to kick off convection
+! 
+!   write(6,*) ' nxc, nyc for perturbation ',nxc,nyc
+!   write(6,*) ' delt for perturbation ',tpbub
+! 
+!   DO J = jts, min(jde-1,jte)
+!     yrad = config_flags%dy*float(j-jde/2-1)/radbub
+!     DO I = its, min(ide-1,ite)
+!       xrad = float(i-1)/float(ide-ids)
+! 
+!       DO K = 1, kte-1
+! 
+! !  put in preturbation theta (bubble) and recalc density.  note,
+! !  the mass in the column is not changing, so when theta changes,
+! !  we recompute density and geopotential
+! 
+!         zrad = 0.5*(grid%ph_1(i,k,j)+grid%ph_1(i,k+1,j)  &
+!                    +grid%phb(i,k,j)+grid%phb(i,k+1,j))/g
+!         zrad = (zrad-htbub)/radz
+!         RAD=SQRT(yrad*yrad+zrad*zrad)
+!         IF(RAD <= 1.) THEN
+!            tp = tpbub*cos(rad*piov2)*cos(rad*piov2)*cos(xrad*2*pi+pi)
+!            grid%t_1(i,k,j)=grid%t_1(i,k,j)+tp
+!            grid%t_2(i,k,j)=grid%t_1(i,k,j)
+!            qvf = 1. + rvovrd*grid%moist(i,k,j,P_QV)
+!            grid%alt(i,k,j) = (r_d/p1000mb)*(grid%t_1(i,k,j)+t0)*qvf* &
+!                         (((grid%p(i,k,j)+grid%pb(i,k,j))/p1000mb)**cvpm)
+!            grid%al(i,k,j) = grid%alt(i,k,j) - grid%alb(i,k,j)
+!         ENDIF
+!       ENDDO
+! 
+! !  rebalance hydrostatically
+! 
+!       DO k  = 2,kte
+!         grid%ph_1(i,k,j) = grid%ph_1(i,k-1,j) - (grid%dnw(k-1))*(       &
+!                      ((grid%c1h(k)*grid%mub(i,j)+grid%c2h(k))+(grid%c1h(k)*grid%mu_1(i,j)))*grid%al(i,k-1,j)+ &
+!                       (grid%c1h(k)*grid%mu_1(i,j))*grid%alb(i,k-1,j)  )
+! 
+!         grid%ph_2(i,k,j) = grid%ph_1(i,k,j)
+!         grid%ph0(i,k,j) = grid%ph_1(i,k,j) + grid%phb(i,k,j)
+!       ENDDO
+! 
+!     ENDDO
+!   ENDDO
+! 
+!   END SELECT ideal_pert
 
 #if 0
 !===============
@@ -1782,104 +838,8 @@ CONTAINS
   !ENDDO
   !ENDDO
 
-  CASE(seabreeze2d_x)
-  DO J = jts, min(jde-1,jte)
-  DO I = its, min(ide-1,ite)
-     thtmp   = grid%t_2(i,1,j)+t0
-     ptmp    = grid%p(i,1,j)+grid%pb(i,1,j)
-     temp(1) = thtmp * (ptmp/p1000mb)**rcp
-     thtmp   = grid%t_2(i,2,j)+t0
-     ptmp    = grid%p(i,2,j)+grid%pb(i,2,j)
-     temp(2) = thtmp * (ptmp/p1000mb)**rcp
-     thtmp   = grid%t_2(i,3,j)+t0
-     ptmp    = grid%p(i,3,j)+grid%pb(i,3,j)
-     temp(3) = thtmp * (ptmp/p1000mb)**rcp
-
-!    grid%tsk(I,J)=grid%cf1*temp(1)+grid%cf2*temp(2)+grid%cf3*temp(3)
-     grid%tmn(I,J)=grid%tsk(I,J)-0.5
-  ENDDO
-  ENDDO
-
-  CASE(convrad)
-  DO J = jts, min(jde-1,jte)
-  DO I = its, min(ide-1,ite)
-         grid%tsk(i,j) = theta_surf * (p_surf/p1000mb)**rcp
-         grid%tmn(i,j) = grid%tsk(i,j)
-  ENDDO
-  ENDDO
-
-  CASE(les)
-  DO J = jts, min(jde-1,jte)
-  DO I = its, min(ide-1,ite)
-         grid%tsk(i,j) = theta_surf * (p_surf/p1000mb)**rcp
-         grid%tmn(i,j) = grid%tsk(i,j)-0.5
-  ENDDO
-  ENDDO
-
   END SELECT ideal_surfacet
 
-
-  trajectories: SELECT CASE ( model_config_rec%ideal_case )
-  CASE (quarter_ss)
-  !  Template for initializing trajectories.  The i, j, and k starting locations
-  !  are specified.  Right now, a small plane in the middle of the domain is
-  !  selected.
-
-  grid%traj_i    = -9999
-  grid%traj_j    = -9999
-  grid%traj_k    = -9999
-  grid%traj_lat  = -9999
-  grid%traj_long = -9999
-
-  IF (config_flags%num_traj .gt. 0 .and. config_flags%traj_opt .gt. 0) THEN
-     icount = 1
-     DO j = (jde + jds)/2 - 2, (jde + jds)/2 + 2, 1
-        DO i = (ide + ids)/2 - 2, (ide + ids)/2 + 2, 1
-           IF ( its .LE. i    .and. ite .GE. i   .and.  jts .LE. j    .and. jte .GE. j ) THEN
-              grid%traj_i   (icount) = i
-              grid%traj_j   (icount) = j
-              grid%traj_k   (icount) = 10
-              grid%traj_lat (icount) = grid%xlat(i,j)
-              grid%traj_long(icount) = grid%xlong(i,j)
-           END IF
-
-#ifdef DM_PARALLEL
-           grid%traj_i   (icount) = wrf_dm_max_real ( grid%traj_i   (icount) )
-           grid%traj_j   (icount) = wrf_dm_max_real ( grid%traj_j   (icount) )
-           grid%traj_k   (icount) = wrf_dm_max_real ( grid%traj_k   (icount) )
-           grid%traj_lat (icount) = wrf_dm_max_real ( grid%traj_lat (icount) )
-           grid%traj_long(icount) = wrf_dm_max_real ( grid%traj_long(icount) )
-#endif
-
-           icount = icount + 1
-           IF (icount .GT. config_flags%num_traj) THEN
-              EXIT
-           END IF
-        END DO
-     END DO
-  END IF
-  END SELECT trajectories
-
-  tracers: SELECT CASE ( config_flags%tracer_opt )
-  CASE (tracer_test1)
-
-  DO J = jts, min(jde-1,jte)
-  DO K = kts, kte-1
-  DO I = its, min(ide-1,ite)
-    grid%h_diabatic(i,k,j) = 0.
-    if(k.eq.kts)tracer(i,k,j,p_tr17_1)=1.
-    if(k.eq.kts.and.grid%xland(i,j).lt.1.5)tracer(i,k,j,p_tr17_2)=1.
-    if(k.eq.kts.and.grid%xland(i,j).gt.1.5)tracer(i,k,j,p_tr17_3)=1.
-    if(k.le.5)tracer(i,k,j,p_tr17_4)=1.
-    if(k.le.5.and.grid%xland(i,j).lt.1.5)tracer(i,k,j,p_tr17_5)=1.
-    if(k.le.5.and.grid%xland(i,j).gt.1.5)tracer(i,k,j,p_tr17_6)=1.
-    if(k.le.10)tracer(i,k,j,p_tr17_7)=1.
-    if(k.le.10.and.k.gt.5)tracer(i,k,j,p_tr17_8)=1.
-  ENDDO
-  ENDDO
-  ENDDO
-
-  END SELECT tracers
 
       !  Save the dry perturbation potential temperature.
 
