@@ -17,9 +17,9 @@
  io_form_restart                     = 11
  io_form_input                       = 11
  io_form_boundary                    = 11
- history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfout_d<domain>_<date>"
- rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfrst_d<domain>_<date>"
- auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.3km/wrfpout_d<domain>_<date>"
+ history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfout_d<domain>_<date>"
+ rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfrst_d<domain>_<date>"
+ auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfpout_d<domain>_<date>"
  auxhist23_interval                  = 60,
  frames_per_auxhist23                = 240,
  io_form_auxhist23                   = 11,
@@ -56,24 +56,17 @@
 
  &physics
  mp_physics                          = 8,
+ no_mp_heating                       = 1,
  cu_physics                          = 0,
- ra_lw_physics                       = 24,
- ra_sw_physics                       = 24,
- bl_pbl_physics                      = 2,
- sf_sfclay_physics                   = 2,
- sf_surface_physics                  = 4,
+ ra_lw_physics                       = 0,
+ ra_sw_physics                       = 0,
+ bl_pbl_physics                      = 1,
+ sf_sfclay_physics                   = 91,
+ sf_surface_physics                  = 0,
  radt                                = 60,
  bldt                                = 0,
  cudt                                = 5,
  isfflx                              = 1
- /
-
- &noah_mp
- dveg				     = 4,
- opt_tbot			     = 1, !used to enforce zero flux at the bottom of the soil layer 
- opt_crs=1
- opt_sfc=1
- opt_btr=1
  /
 
  &fdda
@@ -126,8 +119,3 @@
  ideal_case = 7
  /
 
- &diags
- p_lev_diags = 1,
- num_press_levels = 29,
- press_levels = 99000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7500,5000
- /
