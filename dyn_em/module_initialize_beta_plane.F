@@ -136,6 +136,13 @@ CONTAINS
    INTEGER :: ks, ke, id
 
    LOGICAL, EXTERNAL :: wrf_dm_on_monitor
+   
+! QN: data to read topography from file + interpolate
+
+   INTEGER, PARAMETER :: nx_max = 2000
+   REAL, DIMENSION(nx_max) :: x_in, ht_in
+   INTEGER :: nx_in
+   REAL :: xi
 
 
    SELECT CASE ( model_data_order )
@@ -182,12 +189,12 @@ CONTAINS
 
   ideal_constants: SELECT CASE ( model_config_rec%ideal_case )
   CASE ( beta_plane )
-   hm = 500.
-   xa = 100000./config_flags%dx !qn
+   hm = 100.
+   xa = 10000./config_flags%dx !qn
 
    icm = (ide+ids)/2
 
-   stretch_grid = .false.
+   stretch_grid = .true.
 !   z_scale = .40
    z_scale = 8000./config_flags%ztop !QN: note different from moist simulations where I had z_scale=.5
    pi = 2.*asin(1.0)
@@ -445,9 +452,18 @@ CONTAINS
 
   ideal_terrain: SELECT CASE ( model_config_rec%ideal_case )
   CASE (beta_plane)
+  
+  write(6,*) ' QN: getting topo from input_topo file '
+  CALL get_topo( x_in,ht_in,nx_max,nx_in )
+  CALL wrf_dm_bcast_real( x_in , nx_max )
+  CALL wrf_dm_bcast_real( ht_in , nx_max )
+  CALL wrf_dm_bcast_integer ( nx_in , 1 )
+  write(6,*) ' QN: returned from reading topo, nx_in is ',nx_in
+  
   DO j=jts,jte
   DO i=its,ite 
-    grid%ht(i,j) = hm/(1.+(float(i-icm)/xa)**2)
+    xi= config_flags%dx * REAL(i-ids-icm) / 1000. ! QN: distance from mountain top in km
+    grid%ht(i,j) = interp_0(ht_in,x_in,xi,nx_in)
 !!    grid%ht(i,j) = hm1*exp(-(( float(i-icm)/xa1)**2))   &
 !!               *( (cos(pii*float(i-icm)/xal1))**2 )
     grid%phb(i,1,j) = g*grid%ht(i,j)
@@ -1099,287 +1115,34 @@ CONTAINS
 
 !------------------------------------------------------------------
 
-    subroutine get_sounding_b_wave( zk, p, p_dry, theta, rho,       &
-                             u, v, qv, dry, nl_max, nl_in,  &
-                             u_jet, rho_jet, th_jet, z_jet, &
-                             nz_jet, ny_jet, j_point, debug )
-    implicit none
 
-    integer nl_max, nl_in
-    real zk(nl_max), p(nl_max), theta(nl_max), rho(nl_max), &
-         u(nl_max), v(nl_max), qv(nl_max), p_dry(nl_max)
-    logical dry
+      subroutine get_topo( x,ht,nx_max,nx_in )
+      implicit none
+      integer nx_max,nx_in
+      real x(nx_max),ht(nx_max)
+      logical end_of_file
 
-    integer nz_jet, ny_jet, j_point
-    real, dimension(nz_jet, ny_jet) :: u_jet, rho_jet, th_jet, z_jet
+      integer k
 
-    integer n
-    parameter(n=1000)
-    logical debug
+      open(unit=10,file='input_topo',form='formatted',status='old')
+      rewind(10)
 
-! input sounding data
+      end_of_file = .false.
+      k = 0
 
-    real p_surf, th_surf, qv_surf
-    real pi_surf, pi(n)
-    real h_input(n), th_input(n), qv_input(n), u_input(n), v_input(n)
+      do while (.not. end_of_file)
 
-! diagnostics
-
-    real rho_surf, p_input(n), rho_input(n)
-    real pm_input(n)  !  this are for full moist sounding
-
-! local data
-
-    real r
-    parameter (r = r_d)
-    integer k, it, nl
-    real qvf, qvf1, dz
-
-!  first, read the sounding
-
-!    call read_sounding( p_surf, th_surf, qv_surf, &
-!                          h_input, th_input, qv_input, u_input, v_input,n, nl, debug )
-
-   call calc_jet_sounding( p_surf, th_surf, qv_surf,                             &
-                           h_input, th_input, qv_input, u_input, v_input,        &
-                           n, nl, debug, u_jet, rho_jet, th_jet, z_jet, j_point, &
-                           nz_jet, ny_jet, dry                                  )
-
-   nl = nz_jet
-
-    if(dry) then
-     do k=1,nl
-       qv_input(k) = 0.
-     enddo
-    endif
-
-    if(debug) write(6,*) ' number of input levels = ',nl
-
-      nl_in = nl
-      if(nl_in .gt. nl_max ) then
-        write(6,*) ' too many levels for input arrays ',nl_in,nl_max
-        call wrf_error_fatal ( ' too many levels for input arrays ' )
-      end if
-
-!  compute diagnostics,
-!  first, convert qv(g/kg) to qv(g/g)
-!
-!      do k=1,nl
-!        qv_input(k) = 0.001*qv_input(k)
-!      enddo
-!      p_surf = 100.*p_surf  ! convert to pascals
-
-    qvf = 1. + rvovrd*qv_input(1)
-    rho_surf = 1./((r/p1000mb)*th_surf*qvf*((p_surf/p1000mb)**cvpm))
-    pi_surf = (p_surf/p1000mb)**(r/cp)
-
-    if(debug) then
-      write(6,*) ' surface density is ',rho_surf
-      write(6,*) ' surface pi is    ',pi_surf
-    end if
-
-
-!  integrate moist sounding hydrostatically, starting from the
-!  specified surface pressure
-!  -> first, integrate from surface to lowest level
-
-        qvf = 1. + rvovrd*qv_input(1)
-        qvf1 = 1. + qv_input(1)
-        rho_input(1) = rho_surf
-        dz = h_input(1)
-        do it=1,10
-          pm_input(1) = p_surf &
-                  - 0.5*dz*(rho_surf+rho_input(1))*g*qvf1
-          rho_input(1) = 1./((r/p1000mb)*th_input(1)*qvf*((pm_input(1)/p1000mb)**cvpm))
-        enddo
-
-! integrate up the column
-
-        do k=2,nl
-          rho_input(k) = rho_input(k-1)
-          dz = h_input(k)-h_input(k-1)
-          qvf1 = 0.5*(2.+(qv_input(k-1)+qv_input(k)))
-          qvf = 1. + rvovrd*qv_input(k)   ! qv is in g/kg here
-
-          do it=1,10
-            pm_input(k) = pm_input(k-1) &
-                    - 0.5*dz*(rho_input(k)+rho_input(k-1))*g*qvf1
-            rho_input(k) = 1./((r/p1000mb)*th_input(k)*qvf*((pm_input(k)/p1000mb)**cvpm))
-          enddo
-        enddo
-
-!  we have the moist sounding
-
-!  next, compute the dry sounding using p at the highest level from the
-!  moist sounding and integrating down.
-
-        p_input(nl) = pm_input(nl)
-
-          do k=nl-1,1,-1
-            dz = h_input(k+1)-h_input(k)
-            p_input(k) = p_input(k+1) + 0.5*dz*(rho_input(k)+rho_input(k+1))*g
-          enddo
-
-
-        do k=1,nl
-
-          zk(k) = h_input(k)
-          p(k) = pm_input(k)
-          p_dry(k) = p_input(k)
-          theta(k) = th_input(k)
-          rho(k) = rho_input(k)
-          u(k) = u_input(k)
-          v(k) = v_input(k)
-          qv(k) = qv_input(k)
-
-        enddo
-
-     if(debug) then
-      write(6,*) ' sounding '
-      write(6,*) '  k  height(m)  press (Pa)   pd(Pa)   theta (K)  den(kg/m^3)  u(m/s)     v(m/s)    qv(g/g) '
-      do k=1,nl
-        write(6,'(1x,i3,8(1x,1pe10.3))') k, zk(k), p(k), p_dry(k), theta(k), rho(k), u(k), v(k), qv(k)
+        read(10,*,end=100) x(k+1), ht(k+1)
+        k = k+1
+        go to 110
+ 100    end_of_file = .true.
+ 110    continue
       enddo
 
-     end if
+      nx_in = k
 
-     end subroutine get_sounding_b_wave
+      close(unit=10,status = 'keep')
 
-!------------------------------------------------------------------
-
-  subroutine calc_jet_sounding( p_surf, th_surf, qv_surf,      &
-                                h, th, qv, u, v, n, nl, debug, &
-                                u_jet, rho_jet, th_jet, z_jet, &
-                                jp, nz_jet, ny_jet, dry       )
-  implicit none
-  integer :: n, nl, jp, nz_jet, ny_jet
-
-  real, dimension(nz_jet, ny_jet) :: u_jet, rho_jet, th_jet, z_jet
-  real, dimension(n) :: h,th,qv,u,v
-  real :: p_surf, th_surf, qv_surf
-  logical :: debug, dry
-
-  real, dimension(1:nz_jet) :: rho, rel_hum, p
-  integer :: k
-
-!  some local stuff
-
-  real :: tmppi, es, qvs, temperature
-
-!  get sounding from column jp
-
-   do k=1,nz_jet
-     h(k)  = z_jet(k,jp)
-     th(k) = th_jet(k,jp)
-     qv(k) = 0.
-     rho(k) = rho_jet(k,jp)
-     u(k) = u_jet(k,jp)
-     v(k) = 0.
-   enddo
-
-   if (.not.dry) then
-     DO k=1,nz_jet
-       if(h(k) .gt. 8000.) then
-         rel_hum(k)=0.1
-       else
-         rel_hum(k)=(1.-0.90*(h(k)/8000.)**1.25)
-       end if
-       rel_hum(k) = min(0.7,rel_hum(k))
-     ENDDO
-   else
-     do k=1,nz_jet
-       rel_hum(k) = 0.
-     enddo
-   endif
-
-!  next, compute pressure
-
-   do k=1,nz_jet
-     p(k) = p1000mb*(R_d*rho(k)*th(k)/p1000mb)**cpovcv
-   enddo
-
-!  here we adjust for fixed moisture profile
-
-     IF (.not.dry)  THEN
-
-!  here we assume the input theta is th_v, so we reset theta accordingly
-
-       DO k=1,nz_jet
-         tmppi=(p(k)/p1000mb)**rcp
-         temperature = tmppi*th(k)
-         if (temperature .gt. svpt0) then
-            es  = 1000.*svp1*exp(svp2*(temperature-svpt0)/(temperature-svp3))
-            qvs = ep_2*es/(p(k)-es)
-         else
-            es  = 1000.*svp1*exp( 21.8745584*(temperature-273.16)/(temperature-7.66) )
-            qvs = ep_2*es/(p(k)-es)
-         endif
-         qv(k) = rel_hum(k)*qvs
-         th(k) = th(k)/(1.+.61*qv(k))
-       ENDDO
-
-     ENDIF
-
-!  finally, set the surface data. We'll just do a simple extrapolation
-
-   p_surf = 1.5*p(1) - 0.5*p(2)
-   th_surf = 1.5*th(1) - 0.5*th(2)
-   qv_surf = 1.5*qv(1) - 0.5*qv(2)
-
-   end subroutine calc_jet_sounding
-
-!---------------------------------------------------------------------
-
- SUBROUTINE read_input_jet( u, r, t, zk, nz, ny )
- implicit none
-
- integer, intent(in) :: nz,ny
- real, dimension(nz,ny), intent(out) :: u,r,t,zk
- integer :: ny_in, nz_in, j,k
- real, dimension(ny,nz) :: field_in
- character*256 message
-
-! this code assumes it is called on processor 0 only
-
-   OPEN(unit=10, file='input_jet', form='unformatted', status='old' )
-   REWIND(10)
-   read(10) ny_in,nz_in
-   if((ny_in /= ny ) .or. (nz_in /= nz)) then
-     write(message,*) ' error in input jet dimensions WRB'
-     CALL wrf_message (message)
-     write(message,*) ' ny, ny_input, nz, nz_input ', ny, ny_in, nz,nz_in
-     CALL wrf_message (message)
-     write(message,*) ' error exit '
-     CALL wrf_message (message)
-     call wrf_error_fatal ( ' error in input jet dimensions WRB' )
-   end if
-   read(10) field_in
-   do j=1,ny
-   do k=1,nz
-     u(k,j) = field_in(j,k)
-   enddo
-   enddo
-   read(10) field_in
-   do j=1,ny
-   do k=1,nz
-     t(k,j) = field_in(j,k)
-   enddo
-   enddo
-
-   read(10) field_in
-   do j=1,ny
-   do k=1,nz
-     r(k,j) = field_in(j,k)
-   enddo
-   enddo
-
-   do j=1,ny
-   do k=1,nz
-     zk(k,j) = 125. + 250.*float(k-1)
-   enddo
-   enddo
-
- end subroutine read_input_jet
-
+      end subroutine get_topo
 
 END MODULE module_initialize_ideal
