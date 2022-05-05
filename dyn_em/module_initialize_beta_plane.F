@@ -246,7 +246,7 @@ CONTAINS
   CASE (beta_plane)
 
 ! wrb:  add small narrow mountain:
-   hm = 500.
+   hm = 1000.
    !hm = 0.
    xa = 100000./config_flags%dx !qn: for Shi&Durran type mountain
    ya = 100000./config_flags%dy !qn: for Shi&Durran type mountain
