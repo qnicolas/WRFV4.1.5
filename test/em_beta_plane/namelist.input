@@ -17,32 +17,32 @@
  io_form_restart                     = 11
  io_form_input                       = 11
  io_form_boundary                    = 11
- history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfout_d<domain>_<date>"
- rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfrst_d<domain>_<date>"
- auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.dry.3km/wrfpout_d<domain>_<date>"
- auxhist23_interval                  = 60,
- frames_per_auxhist23                = 240,
- io_form_auxhist23                   = 11,
+ history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.zmf.20km/wrfout_d<domain>_<date>"
+ rst_outname                         = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.zmf.20km/wrfrst_d<domain>_<date>"
+! auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.zmf.20km/wrfpout_d<domain>_<date>"
+! auxhist23_interval                  = 60,
+! frames_per_auxhist23                = 240,
+! io_form_auxhist23                   = 11,
  nocolons			     = .true.
  /
 
  &domains
  numtiles 			     = 1
- nproc_x			     = 218
- nproc_y			     = 3
+ nproc_x			     = 50
+ nproc_y			     = 1
  use_adaptive_time_step              = .false.,
- time_step                           = 16,
+ time_step                           = 40,
  time_step_fract_num                 = 0,
  time_step_fract_den                 = 1,
  max_dom                             = 1,
  s_we                                = 1,
- e_we                                = 3271,
+ e_we                                = 501,
  s_sn                                = 1,
- e_sn                                = 67,
+ e_sn                                = 11,
  s_vert                              = 1,
  e_vert                              = 61,
- dx                                  = 3000,
- dy                                  = 3000,
+ dx                                  = 20000,
+ dy                                  = 20000,
  ztop                                = 30000,
  grid_id                             = 1,
  parent_id                           = 0,
@@ -56,17 +56,25 @@
 
  &physics
  mp_physics                          = 8,
- no_mp_heating                       = 1,
- cu_physics                          = 0,
- ra_lw_physics                       = 0,
- ra_sw_physics                       = 0,
- bl_pbl_physics                      = 1,
- sf_sfclay_physics                   = 91,
- sf_surface_physics                  = 0,
+ no_mp_heating                       = 0,
+ cu_physics                          = 7,!Zhang-McFarlane as in CAM5, 16: New Tiedtke
+ ra_lw_physics                       = 24,
+ ra_sw_physics                       = 24,
+ bl_pbl_physics                      = 2,
+ sf_sfclay_physics                   = 2,
+ sf_surface_physics                  = 4,
  radt                                = 60,
  bldt                                = 0,
- cudt                                = 5,
+ cudt                                = 0,
  isfflx                              = 1
+ /
+
+ &noah_mp
+ dveg                                = 4,
+ opt_tbot                            = 1, !used to enforce zero flux at the bottom of the soil layer
+ opt_crs=1
+ opt_sfc=1
+ opt_btr=1
  /
 
  &fdda
@@ -111,16 +119,16 @@
  /
 
  &namelist_quilt
- nio_tasks_per_group = 3,
- nio_groups = 2,
+ nio_tasks_per_group = 1,
+ nio_groups = 1,
  /
 
  &ideal
  ideal_case = 7
  /
 
- &diags
- p_lev_diags = 1,
- num_press_levels = 29,
- press_levels = 99000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7500,5000
- /
+! &diags
+! p_lev_diags = 1,
+! num_press_levels = 29,
+! press_levels = 99000,97500,95000,92500,90000,87500,85000,82500,80000,77500,75000,70000,65000,60000,55000,50000,45000,40000,35000,30000,25000,22500,20000,17500,15000,12500,10000,7500,5000
+! /
