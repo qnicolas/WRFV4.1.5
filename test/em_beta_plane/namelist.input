@@ -1,35 +1,35 @@
  &time_control
- run_days                            = 50
+ run_days                            = 40
  run_hours                           = 0,
  run_minutes                         = 0,
  run_seconds                         = 0,
- start_year                          = 1970,
- start_month                         = 01,
- start_day                           = 01,
+ start_year                          = 1972,
+ start_month                         = 08,
+ start_day                           = 08,
  start_hour                          = 00,
  start_minute                        = 00,
  start_second                        = 00,
  history_interval                    = 360,
  frames_per_outfile                  = 40,
- restart                             = .false.,
+ restart                             = .true.,
  restart_interval                    = 7200,
  io_form_history                     = 11
  io_form_restart                     = 11
  io_form_input                       = 11
  io_form_boundary                    = 11
- history_outname                     = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.new2.3km/wrfout_d<domain>_<date>"
- rst_outname                         = "/global/cscratch1/sd/qnicolas/WRF/WRFV4_channel/test/em_beta_plane/wrfrst_d<domain>_<date>"
- auxhist23_outname                   = "/global/cscratch1/sd/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.new2.3km/wrfpout_d<domain>_<date>"
+ history_outname                     = "/pscratch/sd/q/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.new2.3km/wrfout_d<domain>_<date>"
+ rst_outname                         = "/pscratch/sd/q/qnicolas/WRF/WRFV4_channel/test/em_beta_plane/wrfrst_d<domain>_<date>"
+ auxhist23_outname                   = "/pscratch/sd/q/qnicolas/wrfdata/saved/channel.wrf.100x2.mountain.60lev.500m.new2.3km/wrfpout_d<domain>_<date>"
  auxhist23_interval                  = 60,
  frames_per_auxhist23                = 240,
  io_form_auxhist23                   = 11,
- nocolons			     = .true.
+ nocolons                            = .true.
  /
 
  &domains
- numtiles 			     = 1
- nproc_x			     = 218
- nproc_y			     = 3
+ numtiles                            = 4
+ nproc_x                             = 128
+ nproc_y                             = 2
  use_adaptive_time_step              = .false.,
  time_step                           = 16,
  time_step_fract_num                 = 0,
@@ -69,8 +69,8 @@
  /
 
  &noah_mp
- dveg				     = 4,
- opt_tbot			     = 1, !used to enforce zero flux at the bottom of the soil layer 
+ dveg                                = 4,
+ opt_tbot                            = 1, !used to enforce zero flux at the bottom of the soil layer
  opt_crs=1
  opt_sfc=1
  opt_btr=1
@@ -80,7 +80,7 @@
  /
 
  &dynamics
- hybrid_opt                          = 2, 
+ hybrid_opt                          = 2,
  rk_ord                              = 3,
  diff_opt                            = 1,
  km_opt                              = 1,
@@ -102,14 +102,14 @@
  /
 
  &bdy_control
- periodic_x                          = .true., 
+ periodic_x                          = .true.,
  symmetric_xs                        = .false.,
  symmetric_xe                        = .false.,
  open_xs                             = .false.,
  open_xe                             = .false.,
  periodic_y                          = .true.,
- symmetric_ys                        = .false., 
- symmetric_ye                        = .false., 
+ symmetric_ys                        = .false.,
+ symmetric_ye                        = .false.,
  open_ys                             = .false.,
  open_ye                             = .false.,
  /
@@ -118,8 +118,8 @@
  /
 
  &namelist_quilt
- nio_tasks_per_group = 3,
- nio_groups = 2,
+ nio_tasks_per_group = 0,
+ nio_groups = 1,
  /
 
  &ideal
